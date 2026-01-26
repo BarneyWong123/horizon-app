@@ -47,10 +47,10 @@ const ChatAuditor = ({ user }) => {
     };
 
     return (
-        <div className="flex flex-col h-[calc(100vh-8rem)] max-w-4xl mx-auto">
-            <div className="mb-6">
-                <h1 className="text-2xl font-bold text-white mb-1">AI Assistant</h1>
-                <p className="text-slate-400 text-sm">Ask questions about your finances in plain English</p>
+        <div className="flex flex-col h-[calc(100vh-10rem)] md:h-[calc(100vh-8rem)] max-w-4xl mx-auto px-4 md:px-0">
+            <div className="mb-4 md:mb-6">
+                <h1 className="text-xl md:text-2xl font-bold text-white mb-1">AI Assistant</h1>
+                <p className="text-slate-400 text-sm">Ask questions about your finances</p>
             </div>
 
             <div className="flex-1 card overflow-hidden flex flex-col p-0">

@@ -21,26 +21,27 @@ const AccountManager = ({ user }) => {
     }, [user.uid]);
 
     return (
-        <div className="space-y-4">
+        <div className="space-y-4 px-4 md:px-0">
             {/* Header */}
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
+            <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
                     <button
                         onClick={() => navigate('/')}
-                        className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
+                        className="p-2 hover:bg-slate-800 rounded-lg transition-colors flex-shrink-0"
                     >
                         <ArrowLeft className="w-5 h-5 text-slate-400" />
                     </button>
-                    <div>
-                        <h1 className="text-xl font-bold text-white">Accounts</h1>
-                        <p className="text-sm text-slate-500">Manage your wallets and accounts</p>
+                    <div className="min-w-0">
+                        <h1 className="text-lg md:text-xl font-bold text-white truncate">Accounts</h1>
+                        <p className="text-sm text-slate-500 hidden sm:block">Manage your wallets and accounts</p>
                     </div>
                 </div>
                 <button
                     onClick={() => setShowAddModal(true)}
-                    className="bg-emerald-500 hover:bg-emerald-600 text-white font-medium px-4 py-2 rounded-xl flex items-center gap-2"
+                    className="bg-emerald-500 hover:bg-emerald-600 text-white font-medium px-3 md:px-4 py-2 rounded-xl flex items-center gap-2 flex-shrink-0"
                 >
-                    <Plus className="w-4 h-4" /> Add Account
+                    <Plus className="w-4 h-4" />
+                    <span className="hidden sm:inline">Add Account</span>
                 </button>
             </div>
 
@@ -187,8 +188,8 @@ const AccountModal = ({ user, account, onClose }) => {
                                         type="button"
                                         onClick={() => setType(t.id)}
                                         className={`flex flex-col items-center p-3 rounded-xl transition-all ${type === t.id
-                                                ? 'bg-slate-700 ring-2 ring-emerald-500'
-                                                : 'bg-slate-800 hover:bg-slate-700'
+                                            ? 'bg-slate-700 ring-2 ring-emerald-500'
+                                            : 'bg-slate-800 hover:bg-slate-700'
                                             }`}
                                     >
                                         <IconComponent className="w-5 h-5 mb-1" style={{ color: t.color }} />

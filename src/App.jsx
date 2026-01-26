@@ -40,7 +40,8 @@ const App = () => {
         ) : (
           <div className="flex">
             <Sidebar user={user} />
-            <main className="flex-1 p-6 ml-64">
+            {/* Main content: padding for mobile header/bottom nav, left margin for desktop sidebar */}
+            <main className="flex-1 min-h-screen pt-16 pb-20 md:pt-0 md:pb-0 md:ml-64 md:p-6">
               <Routes>
                 <Route path="/" element={<Dashboard user={user} />} />
                 <Route path="/scan" element={<SmartScan user={user} />} />

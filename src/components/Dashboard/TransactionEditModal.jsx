@@ -1,16 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Loader2, Trash2 } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { CATEGORIES } from '../../data/categories';
 import { FirebaseService } from '../../services/FirebaseService';
 
 const TransactionEditModal = ({ isOpen, onClose, user, transaction }) => {
-    const [amount, setAmount] = useState(transaction?.total?.toString() || '');
-    const [note, setNote] = useState(transaction?.merchant || '');
-    const [categoryId, setCategoryId] = useState(transaction?.category || 'other');
-    const [date, setDate] = useState(transaction?.date?.split('T')[0] || new Date().toISOString().split('T')[0]);
+    const [amount, setAmount] = useState('');
+    const [note, setNote] = useState('');
+    const [categoryId, setCategoryId] = useState('other');
+    const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [loading, setLoading] = useState(false);
     const [deleting, setDeleting] = useState(false);
+
+    // Sync state with transaction prop when it changes
+    useEffect(() => {
+        if (transaction) {
+            setAmount(transaction.total?.toString() || '');
+            setNote(transaction.merchant || '');
+            setCategoryId(transaction.category || 'other');
+            setDate(transaction.date?.split('T')[0] || new Date().toISOString().split('T')[0]);
+        }
+    }, [transaction]);
 
     if (!isOpen || !transaction) return null;
 
@@ -88,8 +98,8 @@ const TransactionEditModal = ({ isOpen, onClose, user, transaction }) => {
                                         type="button"
                                         onClick={() => setCategoryId(cat.id)}
                                         className={`flex flex-col items-center p-2 rounded-xl transition-all ${categoryId === cat.id
-                                                ? 'bg-slate-700 ring-2 ring-emerald-500'
-                                                : 'bg-slate-800 hover:bg-slate-700'
+                                            ? 'bg-slate-700 ring-2 ring-emerald-500'
+                                            : 'bg-slate-800 hover:bg-slate-700'
                                             }`}
                                     >
                                         <div

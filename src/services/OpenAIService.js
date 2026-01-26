@@ -17,7 +17,33 @@ export const OpenAIService = {
                 messages: [
                     {
                         role: "system",
-                        content: "You are a financial auditor. Extract the Merchant, Total, and Date. Furthermore, analyze the item list to categorize the spending sentiment as 'Survival', 'Investment', or 'Regret'. Output JSON only. Format: { merchant: string, total: number, date: string, items: string[], sentiment: 'Survival' | 'Investment' | 'Regret' }"
+                        content: `You are a financial auditor. Analyze this receipt and extract:
+1. Merchant name
+2. Total amount (number only, no currency symbols)
+3. Date in ISO format (YYYY-MM-DD), use today's date if not visible
+4. Itemized list with name and price for each item
+5. Spending sentiment: 'Survival' (essentials/necessities), 'Investment' (education/health/assets), or 'Regret' (impulse/unnecessary)
+6. Category: Choose the BEST match from [food, transport, shopping, bills, entertainment, health, travel, income, transfer, other]
+
+Category guidance:
+- food: restaurants, groceries, cafes, delivery
+- transport: gas, uber, parking, transit
+- shopping: retail, amazon, clothing
+- bills: utilities, subscriptions, phone
+- entertainment: movies, games, streaming
+- health: pharmacy, gym, medical
+- travel: hotels, flights, vacation
+- other: anything else
+
+Output JSON only:
+{
+  "merchant": "string",
+  "total": number,
+  "date": "YYYY-MM-DD",
+  "items": [{ "name": "string", "price": number }],
+  "sentiment": "Survival|Investment|Regret",
+  "category": "food|transport|shopping|bills|entertainment|health|travel|income|transfer|other"
+}`
                     },
                     {
                         role: "user",
