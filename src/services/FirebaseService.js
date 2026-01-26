@@ -16,7 +16,6 @@ import {
     orderBy,
     onSnapshot,
     serverTimestamp,
-    where,
     getDocs
 } from "firebase/firestore";
 import { auth, db } from "../config/firebase";
