@@ -1,0 +1,24 @@
+@import "tailwindcss";
+
+@theme {
+  --color-slate-950: #020617;
+  --color-brand-emerald: #10b981;
+  --color-brand-emerald-dark: #059669;
+}
+
+@layer base {
+  body {
+    @apply bg-slate-950 text-slate-200 antialiased;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-brand-emerald hover:bg-brand-emerald-dark text-black font-semibold py-2 px-4 rounded-lg transition-colors duration-200;
+  }
+
+  .card {
+    @apply bg-slate-900/50 border border-slate-800 rounded-xl p-6 backdrop-blur-sm;
+  }
+}
