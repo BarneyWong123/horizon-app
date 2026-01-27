@@ -16,7 +16,7 @@ const QuickAddModal = ({ isOpen, onClose, user, accounts, selectedAccountId: def
     const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
     const [loading, setLoading] = useState(false);
     const { showToast } = useToast();
-    const { selectedCurrency: globalCurrency } = useCurrency();
+    const { getCurrencySymbol, selectedCurrency: globalCurrency, convert } = useCurrency();
 
     // Update account and currency when selections change
     useEffect(() => {
@@ -79,7 +79,9 @@ const QuickAddModal = ({ isOpen, onClose, user, accounts, selectedAccountId: def
             if (accountId) {
                 const selectedAccount = accounts.find(a => a.id === accountId);
                 if (selectedAccount) {
-                    const newBalance = (selectedAccount.balance || 0) - numAmount;
+                    // Convert transaction amount to account's currency before deducting
+                    const deductionAmount = convert(numAmount, currency, selectedAccount.currency || 'USD');
+                    const newBalance = (selectedAccount.balance || 0) - deductionAmount;
                     await FirebaseService.updateAccount(user.uid, accountId, {
                         balance: newBalance
                     });
@@ -176,9 +178,9 @@ const QuickAddModal = ({ isOpen, onClose, user, accounts, selectedAccountId: def
                                     type="button"
                                     onClick={() => btn !== '=' && handleCalcInput(btn)}
                                     className={`py-3 rounded-xl font-bold text-lg transition-all ${btn === 'DEL' ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30' :
-                                            btn === 'C' ? 'bg-amber-500/20 text-amber-400 hover:bg-amber-500/30' :
-                                                btn === '=' ? 'bg-emerald-500 text-white hover:bg-emerald-600' :
-                                                    'bg-slate-800 text-slate-200 hover:bg-slate-700'
+                                        btn === 'C' ? 'bg-amber-500/20 text-amber-400 hover:bg-amber-500/30' :
+                                            btn === '=' ? 'bg-emerald-500 text-white hover:bg-emerald-600' :
+                                                'bg-slate-800 text-slate-200 hover:bg-slate-700'
                                         }`}
                                 >
                                     {btn === 'DEL' ? <Delete className="w-5 h-5 mx-auto" /> : btn}
@@ -204,8 +206,8 @@ const QuickAddModal = ({ isOpen, onClose, user, accounts, selectedAccountId: def
                                             type="button"
                                             onClick={() => setAccountId(account.id)}
                                             className={`flex items-center gap-2 p-3 rounded-xl transition-all ${accountId === account.id
-                                                    ? 'bg-slate-700 ring-2 ring-emerald-500'
-                                                    : 'bg-slate-800 hover:bg-slate-700'
+                                                ? 'bg-slate-700 ring-2 ring-emerald-500'
+                                                : 'bg-slate-800 hover:bg-slate-700'
                                                 }`}
                                         >
                                             <div
@@ -224,7 +226,7 @@ const QuickAddModal = ({ isOpen, onClose, user, accounts, selectedAccountId: def
                                     );
                                 })}
                             </div>
-                            {selectedAccount && parseFloat(amount) > (selectedAccount.balance || 0) && (
+                            {selectedAccount && convert(parseFloat(amount), currency, selectedAccount.currency || 'USD') > (selectedAccount.balance || 0) && (
                                 <p className="text-xs text-amber-400 mt-2">
                                     ⚠️ Amount exceeds account balance
                                 </p>

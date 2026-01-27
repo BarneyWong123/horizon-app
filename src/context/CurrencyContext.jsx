@@ -73,11 +73,18 @@ export const CurrencyProvider = ({ children }) => {
         localStorage.setItem(STORAGE_KEY, currencyCode);
     }, []);
 
-    // Convert amount from USD to selected currency
+    // Convert amount from one currency to another
+    const convert = useCallback((amount, fromCurrency, toCurrency) => {
+        const fromRate = exchangeRates[fromCurrency] || 1;
+        const toRate = exchangeRates[toCurrency] || 1;
+        // Convert to USD first (divide by fromRate), then to target (multiply by toRate)
+        return (amount / fromRate) * toRate;
+    }, [exchangeRates]);
+
+    // Convert amount from USD to selected currency (legacy wrapper for backward usage)
     const convertAmount = useCallback((amountInUSD) => {
-        const rate = exchangeRates[selectedCurrency] || 1;
-        return amountInUSD * rate;
-    }, [exchangeRates, selectedCurrency]);
+        return convert(amountInUSD, 'USD', selectedCurrency);
+    }, [convert, selectedCurrency]);
 
     // Format amount with currency symbol
     const formatAmount = useCallback((amountInUSD) => {
@@ -101,6 +108,7 @@ export const CurrencyProvider = ({ children }) => {
         currencies: CURRENCIES,
         exchangeRates,
         isLoadingRates,
+        convert,
         convertAmount,
         formatAmount,
         getCurrencySymbol,

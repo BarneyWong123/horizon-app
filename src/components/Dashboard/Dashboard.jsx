@@ -14,7 +14,7 @@ import { useCurrency } from '../../context/CurrencyContext';
 
 const Dashboard = ({ user }) => {
     const navigate = useNavigate();
-    const { formatAmount } = useCurrency();
+    const { formatAmount, convert } = useCurrency();
     const [transactions, setTransactions] = useState([]);
     const [accounts, setAccounts] = useState([]);
     const [selectedAccountId, setSelectedAccountId] = useState(null);
@@ -84,23 +84,32 @@ const Dashboard = ({ user }) => {
     }, [transactions, selectedCategory, timePeriod, customStartDate, customEndDate]);
 
     const stats = useMemo(() => {
-        const totalSpent = filteredTransactions.reduce((acc, curr) => acc + (curr.total || 0), 0);
+        const totalSpent = filteredTransactions.reduce((acc, curr) => {
+            const amountInUSD = convert(curr.total || 0, curr.currency || 'USD', 'USD');
+            return acc + amountInUSD;
+        }, 0);
+
         const dayOfMonth = new Date().getDate() || 1;
         const dailyRate = totalSpent / dayOfMonth;
 
         // Calculate days until zero (if user has balance)
-        const totalBalance = accounts.reduce((acc, curr) => acc + (curr.balance || 0), 0);
+        const totalBalance = accounts.reduce((acc, curr) => {
+            const balanceInUSD = convert(curr.balance || 0, curr.currency || 'USD', 'USD');
+            return acc + balanceInUSD;
+        }, 0);
+
         const daysUntilZero = dailyRate > 0 ? Math.floor(totalBalance / dailyRate) : Infinity;
 
         // Category breakdown
         const categoryTotals = filteredTransactions.reduce((acc, t) => {
             const cat = t.category || 'other';
-            acc[cat] = (acc[cat] || 0) + (t.total || 0);
+            const amountInUSD = convert(t.total || 0, t.currency || 'USD', 'USD');
+            acc[cat] = (acc[cat] || 0) + amountInUSD;
             return acc;
         }, {});
 
         return { totalSpent, dailyRate, totalBalance, daysUntilZero, categoryTotals };
-    }, [filteredTransactions, accounts]);
+    }, [filteredTransactions, accounts, convert]);
 
     const selectedCategoryData = selectedCategory ? CATEGORIES.find(c => c.id === selectedCategory) : null;
     const CategoryIcon = selectedCategoryData ? (LucideIcons[selectedCategoryData.icon] || LucideIcons.CircleDot) : null;
