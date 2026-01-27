@@ -13,7 +13,6 @@ import {
     updateDoc,
     deleteDoc,
     query,
-    orderBy,
     onSnapshot,
     serverTimestamp,
     getDocs
@@ -69,10 +68,8 @@ export const FirebaseService = {
 
     subscribeToTransactions(uid, callback, accountId = null) {
         const transactionsRef = collection(db, "users", uid, "transactions");
-        let q = query(transactionsRef, orderBy("createdAt", "desc"));
-
-        // Note: Firestore requires composite index for filtering + ordering
-        // For now, we filter client-side if accountId is provided
+        // Removed orderBy to avoid potential index issues. Sorting client-side.
+        const q = query(transactionsRef);
 
         return onSnapshot(q, (snapshot) => {
             let transactions = snapshot.docs.map(doc => ({
@@ -80,11 +77,28 @@ export const FirebaseService = {
                 ...doc.data()
             }));
 
+            // Client-side sort
+            transactions.sort((a, b) => {
+                const getTime = (t) => {
+                    if (t.createdAt && typeof t.createdAt.toMillis === 'function') {
+                        return t.createdAt.toMillis();
+                    }
+                    if (t.date) {
+                        return new Date(t.date).getTime();
+                    }
+                    return 0;
+                };
+                return getTime(b) - getTime(a);
+            });
+
             if (accountId) {
                 transactions = transactions.filter(t => t.accountId === accountId);
             }
 
             callback(transactions);
+        }, (error) => {
+            console.error("Error fetching transactions:", error);
+            callback([]); // Return empty list on error to stop loading state
         });
     },
 
@@ -109,14 +123,29 @@ export const FirebaseService = {
 
     subscribeToAccounts(uid, callback) {
         const accountsRef = collection(db, "users", uid, "accounts");
-        const q = query(accountsRef, orderBy("createdAt", "asc"));
+        const q = query(accountsRef);
 
         return onSnapshot(q, (snapshot) => {
             const accounts = snapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data()
             }));
+
+            // Client-side sort
+            accounts.sort((a, b) => {
+                const getTime = (t) => {
+                    if (t.createdAt && typeof t.createdAt.toMillis === 'function') {
+                        return t.createdAt.toMillis();
+                    }
+                    return 0;
+                };
+                return getTime(a) - getTime(b);
+            });
+
             callback(accounts);
+        }, (error) => {
+            console.error("Error fetching accounts:", error);
+            callback([]);
         });
     },
 
