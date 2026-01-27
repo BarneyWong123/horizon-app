@@ -16,7 +16,6 @@ import {
     orderBy,
     onSnapshot,
     serverTimestamp,
-    where,
     getDocs
 } from "firebase/firestore";
 import { auth, db } from "../config/firebase";
@@ -68,7 +67,7 @@ export const FirebaseService = {
         return deleteDoc(transactionRef);
     },
 
-    subscribeToTransactions(uid, callback, accountId = null) {
+    subscribeToTransactions(uid, callback, accountId = null, onError = null) {
         const transactionsRef = collection(db, "users", uid, "transactions");
         let q = query(transactionsRef, orderBy("createdAt", "desc"));
 
@@ -86,6 +85,9 @@ export const FirebaseService = {
             }
 
             callback(transactions);
+        }, (error) => {
+            console.error("Error subscribing to transactions:", error);
+            if (onError) onError(error);
         });
     },
 
@@ -108,7 +110,7 @@ export const FirebaseService = {
         return deleteDoc(accountRef);
     },
 
-    subscribeToAccounts(uid, callback) {
+    subscribeToAccounts(uid, callback, onError = null) {
         const accountsRef = collection(db, "users", uid, "accounts");
         const q = query(accountsRef, orderBy("createdAt", "asc"));
 
@@ -118,6 +120,9 @@ export const FirebaseService = {
                 ...doc.data()
             }));
             callback(accounts);
+        }, (error) => {
+            console.error("Error subscribing to accounts:", error);
+            if (onError) onError(error);
         });
     },
 
