@@ -7,7 +7,7 @@ import AccountCard from './AccountCard';
 import FloatingActionButton from './FloatingActionButton';
 import QuickAddModal from './QuickAddModal';
 import TransactionEditModal from './TransactionEditModal';
-import { Wallet, TrendingDown, Calendar, ChevronRight, Filter, ChevronDown } from 'lucide-react';
+import { Wallet, TrendingDown, Calendar, ChevronRight, Filter, ChevronDown, CalendarDays, X } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { CATEGORIES } from '../../data/categories';
 import { useCurrency } from '../../context/CurrencyContext';
@@ -24,8 +24,11 @@ const Dashboard = ({ user }) => {
 
     // New filter states
     const [selectedCategory, setSelectedCategory] = useState(null);
-    const [timePeriod, setTimePeriod] = useState('month'); // 'month' | 'year' | 'all'
+    const [timePeriod, setTimePeriod] = useState('month'); // 'today' | 'week' | 'month' | 'year' | 'all' | 'custom'
     const [showCategoryFilter, setShowCategoryFilter] = useState(false);
+    const [showDatePicker, setShowDatePicker] = useState(false);
+    const [customStartDate, setCustomStartDate] = useState('');
+    const [customEndDate, setCustomEndDate] = useState('');
 
     useEffect(() => {
         // Initialize default account if none exists
@@ -51,6 +54,9 @@ const Dashboard = ({ user }) => {
     // Filter transactions by category and time period
     const filteredTransactions = useMemo(() => {
         const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const startOfWeek = new Date(today);
+        startOfWeek.setDate(today.getDate() - today.getDay());
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
         const startOfYear = new Date(now.getFullYear(), 0, 1);
 
@@ -59,15 +65,23 @@ const Dashboard = ({ user }) => {
             if (selectedCategory && t.category !== selectedCategory) return false;
 
             // Time period filter
-            if (timePeriod !== 'all') {
-                const txDate = new Date(t.date);
+            const txDate = new Date(t.date);
+
+            if (timePeriod === 'custom' && customStartDate && customEndDate) {
+                const start = new Date(customStartDate);
+                const end = new Date(customEndDate);
+                end.setHours(23, 59, 59, 999);
+                if (txDate < start || txDate > end) return false;
+            } else if (timePeriod !== 'all') {
+                if (timePeriod === 'today' && txDate < today) return false;
+                if (timePeriod === 'week' && txDate < startOfWeek) return false;
                 if (timePeriod === 'month' && txDate < startOfMonth) return false;
                 if (timePeriod === 'year' && txDate < startOfYear) return false;
             }
 
             return true;
         });
-    }, [transactions, selectedCategory, timePeriod]);
+    }, [transactions, selectedCategory, timePeriod, customStartDate, customEndDate]);
 
     const stats = useMemo(() => {
         const totalSpent = filteredTransactions.reduce((acc, curr) => acc + (curr.total || 0), 0);
@@ -113,14 +127,16 @@ const Dashboard = ({ user }) => {
                 {/* Time Period Filter */}
                 <div className="flex bg-slate-800 rounded-lg p-1">
                     {[
+                        { id: 'today', label: 'Today' },
+                        { id: 'week', label: 'Week' },
                         { id: 'month', label: 'Month' },
                         { id: 'year', label: 'Year' },
                         { id: 'all', label: 'All' }
                     ].map(period => (
                         <button
                             key={period.id}
-                            onClick={() => setTimePeriod(period.id)}
-                            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${timePeriod === period.id
+                            onClick={() => { setTimePeriod(period.id); setShowDatePicker(false); }}
+                            className={`px-2 md:px-3 py-1.5 text-xs font-medium rounded-md transition-all ${timePeriod === period.id
                                 ? 'bg-emerald-500 text-white'
                                 : 'text-slate-400 hover:text-white'
                                 }`}
@@ -129,6 +145,67 @@ const Dashboard = ({ user }) => {
                         </button>
                     ))}
                 </div>
+
+                {/* Custom Date Picker Toggle */}
+                <button
+                    onClick={() => setShowDatePicker(!showDatePicker)}
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${timePeriod === 'custom'
+                        ? 'bg-emerald-500 text-white'
+                        : 'bg-slate-800 text-slate-400 hover:text-white'
+                        }`}
+                >
+                    <CalendarDays className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">
+                        {timePeriod === 'custom' && customStartDate && customEndDate
+                            ? `${new Date(customStartDate).toLocaleDateString()} - ${new Date(customEndDate).toLocaleDateString()}`
+                            : 'Custom'
+                        }
+                    </span>
+                </button>
+
+                {/* Custom Date Range Picker Dropdown */}
+                {showDatePicker && (
+                    <div className="absolute top-20 left-4 md:left-auto bg-slate-800 border border-slate-700 rounded-xl shadow-2xl z-50 p-4 w-72">
+                        <div className="flex items-center justify-between mb-3">
+                            <span className="text-sm font-medium text-white">Custom Date Range</span>
+                            <button onClick={() => setShowDatePicker(false)} className="text-slate-400 hover:text-white">
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+                        <div className="space-y-3">
+                            <div>
+                                <label className="text-xs text-slate-500">Start Date</label>
+                                <input
+                                    type="date"
+                                    className="w-full mt-1 bg-slate-700 border border-slate-600 rounded-lg py-2 px-3 text-sm text-white focus:ring-2 focus:ring-emerald-500 outline-none"
+                                    value={customStartDate}
+                                    onChange={(e) => setCustomStartDate(e.target.value)}
+                                />
+                            </div>
+                            <div>
+                                <label className="text-xs text-slate-500">End Date</label>
+                                <input
+                                    type="date"
+                                    className="w-full mt-1 bg-slate-700 border border-slate-600 rounded-lg py-2 px-3 text-sm text-white focus:ring-2 focus:ring-emerald-500 outline-none"
+                                    value={customEndDate}
+                                    onChange={(e) => setCustomEndDate(e.target.value)}
+                                />
+                            </div>
+                            <button
+                                onClick={() => {
+                                    if (customStartDate && customEndDate) {
+                                        setTimePeriod('custom');
+                                        setShowDatePicker(false);
+                                    }
+                                }}
+                                disabled={!customStartDate || !customEndDate}
+                                className="w-full bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white font-medium py-2 rounded-lg text-sm"
+                            >
+                                Apply
+                            </button>
+                        </div>
+                    </div>
+                )}
 
                 {/* Category Filter */}
                 <div className="relative">
