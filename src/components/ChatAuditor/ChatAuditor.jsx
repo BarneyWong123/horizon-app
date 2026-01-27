@@ -39,7 +39,7 @@ const ChatAuditor = ({ user }) => {
                 transactions
             );
             setMessages(prev => [...prev, { role: 'assistant', content: response }]);
-        } catch (error) {
+        } catch {
             setMessages(prev => [...prev, { role: 'assistant', content: "I encountered a communication error with the core. Please retry." }]);
         } finally {
             setLoading(false);

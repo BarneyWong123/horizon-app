@@ -50,7 +50,7 @@ const SmartScan = ({ user }) => {
             });
             setResult(parsed);
             setNote('');
-        } catch (err) {
+        } catch {
             setError("Failed to parse note. Please try again.");
         } finally {
             setLoading(false);

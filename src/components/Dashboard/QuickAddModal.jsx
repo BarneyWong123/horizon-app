@@ -4,7 +4,7 @@ import * as LucideIcons from 'lucide-react';
 import { CATEGORIES } from '../../data/categories';
 import { FirebaseService } from '../../services/FirebaseService';
 
-const QuickAddModal = ({ isOpen, onClose, user, accounts, selectedAccountId }) => {
+const QuickAddModal = ({ isOpen, onClose, user, selectedAccountId }) => {
     const [amount, setAmount] = useState('');
     const [note, setNote] = useState('');
     const [categoryId, setCategoryId] = useState('food');

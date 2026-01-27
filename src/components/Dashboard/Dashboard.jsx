@@ -32,7 +32,7 @@ const Dashboard = ({ user }) => {
         const unsubTransactions = FirebaseService.subscribeToTransactions(user.uid, (data) => {
             setTransactions(data);
             setLoading(false);
-        }, selectedAccountId);
+        }, { limit: 100, accountId: selectedAccountId });
 
         const unsubAccounts = FirebaseService.subscribeToAccounts(user.uid, (data) => {
             setAccounts(data);

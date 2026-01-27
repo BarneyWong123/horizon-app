@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useState } from 'react';
 import { Upload, X } from 'lucide-react';
 
 const ImageUploader = ({ onUpload, disabled }) => {
