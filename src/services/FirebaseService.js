@@ -17,7 +17,8 @@ import {
     serverTimestamp,
     getDocs,
     limit,
-    orderBy
+    orderBy,
+    runTransaction
 } from "firebase/firestore";
 import { auth, db } from "../config/firebase";
 
@@ -47,25 +48,117 @@ export const FirebaseService = {
 
     // Transaction Operations
     async addTransaction(uid, transactionData) {
-        const transactionsRef = collection(db, "users", uid, "transactions");
-        return addDoc(transactionsRef, {
-            ...transactionData,
-            createdAt: serverTimestamp(),
-            date: transactionData.date || new Date().toISOString()
+        // If no account specified, just add the transaction
+        if (!transactionData.accountId) {
+            const transactionsRef = collection(db, "users", uid, "transactions");
+            return addDoc(transactionsRef, {
+                ...transactionData,
+                createdAt: serverTimestamp(),
+                date: transactionData.date || new Date().toISOString()
+            });
+        }
+
+        return runTransaction(db, async (transaction) => {
+            const accountRef = doc(db, "users", uid, "accounts", transactionData.accountId);
+            const accountDoc = await transaction.get(accountRef);
+
+            if (!accountDoc.exists()) {
+                throw new Error("Account does not exist!");
+            }
+
+            const newBalance = (accountDoc.data().balance || 0) + (transactionData.type === 'income' ? transactionData.total : -transactionData.total);
+
+            // Add transaction
+            const transactionsRef = collection(db, "users", uid, "transactions");
+            const newTransactionRef = doc(transactionsRef); // Generate ID
+            transaction.set(newTransactionRef, {
+                ...transactionData,
+                createdAt: serverTimestamp(),
+                date: transactionData.date || new Date().toISOString()
+            });
+
+            // Update account balance
+            transaction.update(accountRef, { balance: newBalance });
         });
     },
 
-    async updateTransaction(uid, transactionId, data) {
+    async updateTransaction(uid, transactionId, newData) {
         const transactionRef = doc(db, "users", uid, "transactions", transactionId);
-        return updateDoc(transactionRef, {
-            ...data,
-            updatedAt: serverTimestamp()
+
+        return runTransaction(db, async (transaction) => {
+            const transactionDoc = await transaction.get(transactionRef);
+            if (!transactionDoc.exists()) {
+                throw new Error("Transaction does not exist!");
+            }
+
+            const oldData = transactionDoc.data();
+            const accountId = oldData.accountId;
+
+            // Update the transaction
+            transaction.update(transactionRef, {
+                ...newData,
+                updatedAt: serverTimestamp()
+            });
+
+            // If account is involved, update balance
+            if (accountId) {
+                const accountRef = doc(db, "users", uid, "accounts", accountId);
+                const accountDoc = await transaction.get(accountRef);
+
+                if (accountDoc.exists()) {
+                    let balanceChange = 0;
+
+                    // Revert old transaction effect
+                    if (oldData.type === 'income') {
+                        balanceChange -= oldData.total;
+                    } else {
+                        balanceChange += oldData.total;
+                    }
+
+                    // Apply new transaction effect (use newData if present, else oldData)
+                    const newType = newData.type || oldData.type;
+                    const newTotal = newData.total !== undefined ? newData.total : oldData.total;
+
+                    if (newType === 'income') {
+                        balanceChange += newTotal;
+                    } else {
+                        balanceChange -= newTotal;
+                    }
+
+                    const newBalance = (accountDoc.data().balance || 0) + balanceChange;
+                    transaction.update(accountRef, { balance: newBalance });
+                }
+            }
         });
     },
 
     async deleteTransaction(uid, transactionId) {
         const transactionRef = doc(db, "users", uid, "transactions", transactionId);
-        return deleteDoc(transactionRef);
+
+        return runTransaction(db, async (transaction) => {
+            const transactionDoc = await transaction.get(transactionRef);
+            if (!transactionDoc.exists()) {
+                throw new Error("Transaction does not exist!");
+            }
+
+            const transactionData = transactionDoc.data();
+            const accountId = transactionData.accountId;
+
+            // Delete transaction
+            transaction.delete(transactionRef);
+
+            // Update account balance if applicable
+            if (accountId) {
+                const accountRef = doc(db, "users", uid, "accounts", accountId);
+                const accountDoc = await transaction.get(accountRef);
+
+                if (accountDoc.exists()) {
+                    const currentBalance = accountDoc.data().balance || 0;
+                    const newBalance = currentBalance + (transactionData.type === 'income' ? -transactionData.total : transactionData.total);
+                    transaction.update(accountRef, { balance: newBalance });
+                }
+            }
+        });
     },
 
     subscribeToTransactions(uid, callback, options = {}) {

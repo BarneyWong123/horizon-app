@@ -37,9 +37,34 @@ const Dashboard = ({ user }) => {
         };
     }, [user.uid, selectedAccountId]);
 
+    const monthlyTransactions = useMemo(() => {
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const currentMonth = now.getMonth();
+
+        return transactions.filter(t => {
+            let tDate;
+            if (t.date) {
+                tDate = new Date(t.date);
+            } else if (t.createdAt && typeof t.createdAt.toDate === 'function') {
+                tDate = t.createdAt.toDate();
+            } else {
+                // If created via pending write or missing date, assume it's recent (this month)
+                // This prevents newly added items from disappearing until refresh
+                tDate = new Date();
+            }
+
+            const isThisMonth = tDate.getFullYear() === currentYear && tDate.getMonth() === currentMonth;
+            const isExpense = t.type === 'expense' || !t.type;
+
+            return isThisMonth && isExpense;
+        });
+    }, [transactions]);
+
     const stats = useMemo(() => {
-        const totalSpent = transactions.reduce((acc, curr) => acc + (curr.total || 0), 0);
-        const dayOfMonth = new Date().getDate() || 1;
+        const totalSpent = monthlyTransactions.reduce((acc, curr) => acc + (curr.total || 0), 0);
+        const now = new Date();
+        const dayOfMonth = now.getDate() || 1;
         const dailyRate = totalSpent / dayOfMonth;
 
         // Calculate days until zero (if user has balance)
@@ -47,7 +72,7 @@ const Dashboard = ({ user }) => {
         const daysUntilZero = dailyRate > 0 ? Math.floor(totalBalance / dailyRate) : Infinity;
 
         return { totalSpent, dailyRate, totalBalance, daysUntilZero };
-    }, [transactions, accounts]);
+    }, [monthlyTransactions, accounts]);
 
     if (loading) {
         return (
@@ -135,7 +160,7 @@ const Dashboard = ({ user }) => {
             <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4">
                 <h3 className="text-slate-400 text-sm font-medium mb-4">Spending Trend</h3>
                 <div className="h-[250px]">
-                    <SpendingChart transactions={transactions} />
+                    <SpendingChart transactions={monthlyTransactions} />
                 </div>
             </div>
 
