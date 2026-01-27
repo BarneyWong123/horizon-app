@@ -72,8 +72,9 @@ export const FirebaseService = {
         const { accountId, limit: limitCount } = options;
         const transactionsRef = collection(db, "users", uid, "transactions");
 
-        // Use server-side sorting on 'date' (single field index exists by default)
-        const constraints = [orderBy("date", "desc")];
+        // Use server-side sorting on 'createdAt' (single field index exists by default)
+        // This ensures compatibility with mobile apps that might not set the 'date' field.
+        const constraints = [orderBy("createdAt", "desc")];
 
         if (limitCount) {
             constraints.push(limit(limitCount));
@@ -131,6 +132,10 @@ export const FirebaseService = {
             try {
                 accounts.sort((a, b) => {
                     const getTime = (t) => {
+                        // Handle pending writes (null createdAt) by treating them as 'now'
+                        if (t.createdAt === null) {
+                            return Date.now();
+                        }
                         if (t.createdAt && typeof t.createdAt.toMillis === 'function') {
                             return t.createdAt.toMillis();
                         }
