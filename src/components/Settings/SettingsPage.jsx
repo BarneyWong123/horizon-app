@@ -3,7 +3,7 @@ import {
     User, Moon, Sun, Bell, Shield, Wallet, Trash2,
     ChevronRight, LogOut, Settings2, LayoutDashboard, CreditCard, Lock
 } from 'lucide-react';
-import { useAuth } from '../../hooks/useAuth'; // Assuming useAuth exists or I'll use FirebaseService directly
+
 import { FirebaseService } from '../../services/FirebaseService';
 import { useTheme } from '../../context/ThemeContext';
 import { useCurrency } from '../../context/CurrencyContext';

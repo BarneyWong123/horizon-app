@@ -96,7 +96,7 @@ const Dashboard = ({ user }) => {
         }, 0);
 
         const dayOfMonth = new Date().getDate() || 1;
-        const dayOfMonth = new Date().getDate() || 1;
+
         const dailyRate = totalSpent / dayOfMonth;
         const monthlyRate = totalSpent; // If filtering by month, totalSpent is the monthly spend so far. 
         // If "All Time", we need to divide by months. For simplicity, let's just show Total vs Daily.
