@@ -17,7 +17,6 @@ import {
     serverTimestamp,
     getDocs,
     limit,
-    orderBy,
     runTransaction
 } from "firebase/firestore";
 import { auth, db } from "../config/firebase";
@@ -165,9 +164,9 @@ export const FirebaseService = {
         const { accountId, limit: limitCount } = options;
         const transactionsRef = collection(db, "users", uid, "transactions");
 
-        // Use server-side sorting on 'createdAt' (single field index exists by default)
-        // This ensures compatibility with mobile apps that might not set the 'date' field.
-        const constraints = [orderBy("createdAt", "desc")];
+        // Remove server-side ordering to ensure we get ALL documents,
+        // even those missing 'createdAt' or 'date' fields (e.g. from mobile).
+        const constraints = [];
 
         if (limitCount) {
             constraints.push(limit(limitCount));
@@ -185,10 +184,21 @@ export const FirebaseService = {
                 transactions = transactions.filter(t => t.accountId === accountId);
             }
 
+            // Client-side sort: robust handling for missing/different timestamp fields
+            transactions.sort((a, b) => {
+                const getDate = (t) => {
+                    if (t.createdAt && typeof t.createdAt.toMillis === 'function') return t.createdAt.toMillis();
+                    if (t.date) return new Date(t.date).getTime();
+                    if (t.timestamp && typeof t.timestamp.toMillis === 'function') return t.timestamp.toMillis();
+                    return 0; // Fallback for missing dates
+                };
+                return getDate(b) - getDate(a); // Descending
+            });
+
             callback(transactions);
         }, (error) => {
             console.error("Error fetching transactions:", error);
-            callback([]); // Return empty list on error to stop loading state
+            callback([]);
         });
     },
 
