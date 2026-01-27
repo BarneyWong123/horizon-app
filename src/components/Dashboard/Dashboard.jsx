@@ -7,7 +7,7 @@ import AccountCard from './AccountCard';
 import FloatingActionButton from './FloatingActionButton';
 import QuickAddModal from './QuickAddModal';
 import TransactionEditModal from './TransactionEditModal';
-import { Wallet, TrendingDown, Calendar, ChevronRight, Filter, ChevronDown } from 'lucide-react';
+import { Wallet, TrendingDown, Calendar, ChevronRight, Filter, ChevronDown, AlertCircle } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { CATEGORIES } from '../../data/categories';
 
@@ -17,6 +17,7 @@ const Dashboard = ({ user }) => {
     const [accounts, setAccounts] = useState([]);
     const [selectedAccountId, setSelectedAccountId] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const [showQuickAdd, setShowQuickAdd] = useState(false);
     const [editingTransaction, setEditingTransaction] = useState(null);
 
@@ -27,22 +28,40 @@ const Dashboard = ({ user }) => {
 
     useEffect(() => {
         // Initialize default account if none exists
-        FirebaseService.initializeDefaultAccount(user.uid);
-
-        const unsubTransactions = FirebaseService.subscribeToTransactions(user.uid, (data) => {
-            setTransactions(data);
-            setLoading(false);
-        }, selectedAccountId);
+        FirebaseService.initializeDefaultAccount(user.uid)
+            .catch(err => {
+                console.error("Failed to initialize default account:", err);
+                setError("Failed to initialize account. Please try again.");
+                setLoading(false);
+            });
 
         const unsubAccounts = FirebaseService.subscribeToAccounts(user.uid, (data) => {
             setAccounts(data);
             // Also set loading to false when accounts arrive (handles empty transactions case)
             setLoading(false);
+        }, (err) => {
+            console.error("Failed to subscribe to accounts:", err);
+            setError("Failed to load accounts. Please check your connection.");
+            setLoading(false);
+        });
+
+        return () => {
+            unsubAccounts();
+        };
+    }, [user.uid]);
+
+    useEffect(() => {
+        const unsubTransactions = FirebaseService.subscribeToTransactions(user.uid, (data) => {
+            setTransactions(data);
+            setLoading(false);
+        }, selectedAccountId, (err) => {
+            console.error("Failed to subscribe to transactions:", err);
+            setError("Failed to load transactions. Please check your connection.");
+            setLoading(false);
         });
 
         return () => {
             unsubTransactions();
-            unsubAccounts();
         };
     }, [user.uid, selectedAccountId]);
 
@@ -94,6 +113,24 @@ const Dashboard = ({ user }) => {
             <div className="animate-pulse space-y-6 p-4">
                 <div className="h-24 bg-slate-900 rounded-xl"></div>
                 <div className="h-48 bg-slate-900 rounded-xl"></div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="flex flex-col items-center justify-center h-64 p-4 text-center">
+                <div className="text-red-500 mb-2">
+                    <AlertCircle className="w-12 h-12" />
+                </div>
+                <h2 className="text-xl font-bold text-white mb-2">Something went wrong</h2>
+                <p className="text-slate-400 mb-4">{error}</p>
+                <button
+                    onClick={() => window.location.reload()}
+                    className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors"
+                >
+                    Reload Page
+                </button>
             </div>
         );
     }
@@ -190,7 +227,7 @@ const Dashboard = ({ user }) => {
             {accounts.length > 0 && (
                 <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0">
                     <button
-                        onClick={() => setSelectedAccountId(null)}
+                        onClick={() => { setSelectedAccountId(null); setLoading(true); }}
                         className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all ${selectedAccountId === null
                             ? 'bg-emerald-500 text-white'
                             : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
@@ -203,7 +240,7 @@ const Dashboard = ({ user }) => {
                             key={account.id}
                             account={account}
                             isSelected={selectedAccountId === account.id}
-                            onClick={() => setSelectedAccountId(account.id)}
+                            onClick={() => { setSelectedAccountId(account.id); setLoading(true); }}
                             compact
                         />
                     ))}
