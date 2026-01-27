@@ -78,18 +78,23 @@ export const FirebaseService = {
             }));
 
             // Client-side sort
-            transactions.sort((a, b) => {
-                const getTime = (t) => {
-                    if (t.createdAt && typeof t.createdAt.toMillis === 'function') {
-                        return t.createdAt.toMillis();
-                    }
-                    if (t.date) {
-                        return new Date(t.date).getTime();
-                    }
-                    return 0;
-                };
-                return getTime(b) - getTime(a);
-            });
+            try {
+                transactions.sort((a, b) => {
+                    const getTime = (t) => {
+                        if (t.createdAt && typeof t.createdAt.toMillis === 'function') {
+                            return t.createdAt.toMillis();
+                        }
+                        if (t.date) {
+                            const time = new Date(t.date).getTime();
+                            return isNaN(time) ? 0 : time;
+                        }
+                        return 0;
+                    };
+                    return getTime(b) - getTime(a);
+                });
+            } catch (e) {
+                console.error("Error sorting transactions:", e);
+            }
 
             if (accountId) {
                 transactions = transactions.filter(t => t.accountId === accountId);
@@ -132,15 +137,19 @@ export const FirebaseService = {
             }));
 
             // Client-side sort
-            accounts.sort((a, b) => {
-                const getTime = (t) => {
-                    if (t.createdAt && typeof t.createdAt.toMillis === 'function') {
-                        return t.createdAt.toMillis();
-                    }
-                    return 0;
-                };
-                return getTime(a) - getTime(b);
-            });
+            try {
+                accounts.sort((a, b) => {
+                    const getTime = (t) => {
+                        if (t.createdAt && typeof t.createdAt.toMillis === 'function') {
+                            return t.createdAt.toMillis();
+                        }
+                        return 0;
+                    };
+                    return getTime(a) - getTime(b);
+                });
+            } catch (e) {
+                console.error("Error sorting accounts:", e);
+            }
 
             callback(accounts);
         }, (error) => {
