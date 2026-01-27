@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { FirebaseService } from '../../services/FirebaseService';
 import TransactionList from '../Dashboard/TransactionList';
 import TransactionEditModal from '../Dashboard/TransactionEditModal';
+import { generateCSV } from '../../utils/exportUtils';
+import { useCategory } from '../../context/CategoryContext';
+import { Download } from 'lucide-react';
 import { Search, Filter, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { CATEGORIES } from '../../data/categories';
@@ -13,13 +16,24 @@ const TransactionHistory = ({ user }) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [filterCategory, setFilterCategory] = useState(null);
     const [editingTransaction, setEditingTransaction] = useState(null);
+    const { categories } = useCategory();
+    const [accounts, setAccounts] = useState([]); // Need accounts for export names
 
     useEffect(() => {
-        const unsubscribe = FirebaseService.subscribeToTransactions(user.uid, (data) => {
+        const unsubTx = FirebaseService.subscribeToTransactions(user.uid, (data) => {
             setTransactions(data);
             setLoading(false);
         });
-        return () => unsubscribe();
+
+        // Also fetch accounts for export context
+        const unsubAcc = FirebaseService.subscribeToAccounts(user.uid, (data) => {
+            setAccounts(data);
+        });
+
+        return () => {
+            unsubTx();
+            unsubAcc();
+        };
     }, [user.uid]);
 
     const filteredTransactions = transactions.filter(t => {
@@ -32,17 +46,27 @@ const TransactionHistory = ({ user }) => {
     return (
         <div className="space-y-4 px-4 md:px-0">
             {/* Header */}
-            <div className="flex items-center gap-3">
-                <button
-                    onClick={() => navigate('/')}
-                    className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
-                >
-                    <ArrowLeft className="w-5 h-5 text-slate-400" />
-                </button>
-                <div>
-                    <h1 className="text-lg md:text-xl font-bold text-white">All Transactions</h1>
-                    <p className="text-sm text-slate-500">{transactions.length} total</p>
+            <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={() => navigate('/')}
+                        className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
+                    >
+                        <ArrowLeft className="w-5 h-5 text-slate-400" />
+                    </button>
+                    <div>
+                        <h1 className="text-lg md:text-xl font-bold text-white">All Transactions</h1>
+                        <p className="text-sm text-slate-500">{transactions.length} total</p>
+                    </div>
                 </div>
+                <button
+                    onClick={() => generateCSV(transactions, categories, accounts)}
+                    className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl transition-all border border-slate-700 hover:border-emerald-500/50"
+                    title="Export as CSV"
+                >
+                    <Download className="w-4 h-4" />
+                    <span className="hidden sm:inline text-sm font-medium">Export CSV</span>
+                </button>
             </div>
 
             {/* Search & Filter */}

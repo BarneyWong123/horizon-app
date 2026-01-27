@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Scan, Receipt, Wallet, MessageSquare, LogOut, Compass } from 'lucide-react';
+import { LayoutDashboard, Scan, Receipt, Wallet, MessageSquare, LogOut, Compass, Settings } from 'lucide-react';
 import { FirebaseService } from '../../services/FirebaseService';
 import CurrencySelector from '../UI/CurrencySelector';
 
@@ -13,6 +13,7 @@ const Sidebar = ({ user }) => {
         { to: '/accounts', icon: Wallet, label: 'Accounts' },
         { to: '/scan', icon: Scan, label: 'Scan Receipt' },
         { to: '/assistant', icon: MessageSquare, label: 'AI Assistant' },
+        { to: '/settings', icon: Settings, label: 'Settings' },
     ];
 
     // Mobile bottom nav items (fewer items for cleaner mobile UX)
@@ -22,6 +23,7 @@ const Sidebar = ({ user }) => {
         { to: '/scan', icon: Scan, label: 'Scan' },
         { to: '/accounts', icon: Wallet, label: 'Accounts' },
         { to: '/assistant', icon: MessageSquare, label: 'AI' },
+        { to: '/settings', icon: Settings, label: 'Settings' },
     ];
 
     return (

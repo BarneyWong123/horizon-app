@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { X, Loader2, Delete, Wallet, ChevronDown } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
-import { CATEGORIES } from '../../data/categories';
-import { CURRENCIES, getCurrencyByCode } from '../../data/currencies';
 import { FirebaseService } from '../../services/FirebaseService';
 import { useToast } from '../../context/ToastContext';
 import { useCurrency } from '../../context/CurrencyContext';
+import { useCategory } from '../../context/CategoryContext';
 
 const QuickAddModal = ({ isOpen, onClose, user, accounts, selectedAccountId: defaultAccountId }) => {
     const [amount, setAmount] = useState('0');
@@ -16,7 +15,8 @@ const QuickAddModal = ({ isOpen, onClose, user, accounts, selectedAccountId: def
     const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
     const [loading, setLoading] = useState(false);
     const { showToast } = useToast();
-    const { getCurrencySymbol, selectedCurrency: globalCurrency, convert } = useCurrency();
+    const { selectedCurrency: globalCurrency, convert } = useCurrency();
+    const { categories } = useCategory();
 
     // Update account and currency when selections change
     useEffect(() => {
@@ -39,6 +39,47 @@ const QuickAddModal = ({ isOpen, onClose, user, accounts, selectedAccountId: def
         }
     }, [accountId, accounts, globalCurrency]);
 
+    // Keyboard support
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (!isOpen) return;
+
+            // Prevent default for calculator keys to avoid side effects (except modifiers)
+            const key = e.key;
+
+            if (key === 'Escape') {
+                onClose();
+                return;
+            }
+
+            // Numbers and Operators
+            if (/^[0-9.]$/.test(key)) {
+                e.preventDefault();
+                handleCalcInput(key);
+            } else if (['+', '-', '*', '/'].includes(key)) {
+                e.preventDefault();
+                handleCalcInput(key);
+            } else if (key === 'Enter') {
+                e.preventDefault();
+                // If equation exists (contains operators), evaluate it. Else submit.
+                if (['+', '-', '*', '/'].some(op => amount.includes(op))) {
+                    handleCalcInput('=');
+                } else {
+                    handleSubmit(e);
+                }
+            } else if (key === 'Backspace') {
+                e.preventDefault();
+                handleCalcInput('DEL');
+            } else if (key === 'c' || key === 'C') {
+                e.preventDefault();
+                handleCalcInput('C');
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [isOpen, amount, note, categoryId, accountId, currency]); // Dependencies for submit
+
     if (!isOpen) return null;
 
     const selectedCurrencyInfo = getCurrencyByCode(currency);
@@ -47,39 +88,71 @@ const QuickAddModal = ({ isOpen, onClose, user, accounts, selectedAccountId: def
         if (value === 'C') {
             setAmount('0');
         } else if (value === 'DEL') {
-            setAmount(prev => prev.length > 1 ? prev.slice(0, -1) : '0');
-        } else if (value === '.') {
-            if (!amount.includes('.')) {
-                setAmount(prev => prev + '.');
+            setAmount(prev => {
+                if (prev.length <= 1) return '0';
+                if (prev === 'Error') return '0';
+                return prev.slice(0, -1);
+            });
+        } else if (value === '=') {
+            try {
+                // Safe evaluation
+                // Replace visual X with * if needed (though we use * in state for simplicity)
+                const safeExpression = amount.replace(/[^0-9.+\-*/]/g, '');
+                // eslint-disable-next-line
+                const result = Function('"use strict";return (' + safeExpression + ')')();
+                setAmount(String(parseFloat(result.toFixed(2))));
+            } catch (e) {
+                setAmount('Error');
+            }
+        } else if (['+', '-', '*', '/'].includes(value)) {
+            // Prevent double operators
+            if (['+', '-', '*', '/'].includes(amount.slice(-1))) {
+                setAmount(prev => prev.slice(0, -1) + value);
+            } else {
+                setAmount(prev => prev + value);
             }
         } else {
-            setAmount(prev => prev === '0' ? value : prev + value);
+            // Numbers
+            setAmount(prev => {
+                if (prev === '0' || prev === 'Error') return value;
+                return prev + value;
+            });
         }
     };
 
     const handleSubmit = async (e) => {
-        e.preventDefault();
-        const numAmount = parseFloat(amount);
+        if (e) e.preventDefault();
+
+        // Evaluate if there's an unfinished expression
+        let finalAmount = amount;
+        if (['+', '-', '*', '/'].some(op => amount.includes(op))) {
+            try {
+                const safeExpression = amount.replace(/[^0-9.+\-*/]/g, '');
+                const result = Function('"use strict";return (' + safeExpression + ')')();
+                finalAmount = String(result);
+            } catch (e) {
+                return; // Don't submit if error
+            }
+        }
+
+        const numAmount = parseFloat(finalAmount);
         if (!numAmount || numAmount <= 0) return;
 
         setLoading(true);
         try {
-            // Add the transaction with currency
             await FirebaseService.addTransaction(user.uid, {
                 total: numAmount,
                 category: categoryId,
-                merchant: note || CATEGORIES.find(c => c.id === categoryId)?.name || 'Expense',
+                merchant: note || categories.find(c => c.id === categoryId)?.name || 'Expense',
                 date: new Date().toISOString().split('T')[0],
                 accountId: accountId || null,
                 currency: currency,
                 type: 'expense'
             });
 
-            // Deduct from account balance if account is selected
             if (accountId) {
                 const selectedAccount = accounts.find(a => a.id === accountId);
                 if (selectedAccount) {
-                    // Convert transaction amount to account's currency before deducting
                     const deductionAmount = convert(numAmount, currency, selectedAccount.currency || 'USD');
                     const newBalance = (selectedAccount.balance || 0) - deductionAmount;
                     await FirebaseService.updateAccount(user.uid, accountId, {
@@ -88,14 +161,10 @@ const QuickAddModal = ({ isOpen, onClose, user, accounts, selectedAccountId: def
                 }
             }
 
-            // Reset form
             setAmount('0');
             setNote('');
             setCategoryId('food');
-
-            // Show success toast
             showToast('Expense added successfully!', 'success');
-
             onClose();
         } catch (err) {
             console.error(err);
@@ -106,10 +175,11 @@ const QuickAddModal = ({ isOpen, onClose, user, accounts, selectedAccountId: def
     };
 
     const calcButtons = [
-        ['7', '8', '9', 'DEL'],
-        ['4', '5', '6', 'C'],
-        ['1', '2', '3', '.'],
-        ['0', '00', '000', '=']
+        ['C', '/', '*', 'DEL'],
+        ['7', '8', '9', '-'],
+        ['4', '5', '6', '+'],
+        ['1', '2', '3', '='],
+        ['0', '.'] // Last row custom layout
     ];
 
     const selectedAccount = accountId ? accounts.find(a => a.id === accountId) : null;
@@ -125,13 +195,12 @@ const QuickAddModal = ({ isOpen, onClose, user, accounts, selectedAccountId: def
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="p-4 space-y-4">
-                    {/* Amount Display with Currency Picker */}
+                <div className="p-4 space-y-4">
+                    {/* Amount Display */}
                     <div className="bg-slate-800 rounded-xl p-4">
                         <div className="flex items-center justify-between mb-2">
                             <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Amount</label>
-
-                            {/* Inline Currency Selector */}
+                            {/* Currency Picker */}
                             <div className="relative">
                                 <button
                                     type="button"
@@ -142,7 +211,6 @@ const QuickAddModal = ({ isOpen, onClose, user, accounts, selectedAccountId: def
                                     <span className="text-slate-300">{currency}</span>
                                     <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform ${showCurrencyPicker ? 'rotate-180' : ''}`} />
                                 </button>
-
                                 {showCurrencyPicker && (
                                     <div className="absolute top-full mt-1 right-0 w-44 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl z-20 max-h-48 overflow-y-auto">
                                         {CURRENCIES.map(c => (
@@ -164,126 +232,110 @@ const QuickAddModal = ({ isOpen, onClose, user, accounts, selectedAccountId: def
                                 )}
                             </div>
                         </div>
-                        <div className="text-3xl font-bold text-white">
-                            {selectedCurrencyInfo?.symbol || '$'}{parseFloat(amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        <div className="text-3xl font-bold text-white tracking-wider overflow-x-auto whitespace-nowrap scrollbar-hide">
+                            {amount || '0'}
                         </div>
                     </div>
 
                     {/* Calculator Keypad */}
                     <div className="grid grid-cols-4 gap-2">
-                        {calcButtons.map((row, rowIdx) =>
-                            row.map((btn) => (
-                                <button
-                                    key={`${rowIdx}-${btn}`}
-                                    type="button"
-                                    onClick={() => btn !== '=' && handleCalcInput(btn)}
-                                    className={`py-3 rounded-xl font-bold text-lg transition-all ${btn === 'DEL' ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30' :
-                                        btn === 'C' ? 'bg-amber-500/20 text-amber-400 hover:bg-amber-500/30' :
-                                            btn === '=' ? 'bg-emerald-500 text-white hover:bg-emerald-600' :
-                                                'bg-slate-800 text-slate-200 hover:bg-slate-700'
-                                        }`}
-                                >
-                                    {btn === 'DEL' ? <Delete className="w-5 h-5 mx-auto" /> : btn}
-                                </button>
-                            ))
-                        )}
-                    </div>
-
-                    {/* Account Selector */}
-                    {accounts.length > 0 && (
-                        <div>
-                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wide flex items-center gap-2">
-                                <Wallet className="w-3 h-3" />
-                                Deduct From Account
-                            </label>
-                            <div className="grid grid-cols-2 gap-2 mt-2">
-                                {accounts.map((account) => {
-                                    const IconComponent = LucideIcons[account.icon] || LucideIcons.Wallet;
-                                    const accountCurrency = getCurrencyByCode(account.currency || 'USD');
-                                    return (
-                                        <button
-                                            key={account.id}
-                                            type="button"
-                                            onClick={() => setAccountId(account.id)}
-                                            className={`flex items-center gap-2 p-3 rounded-xl transition-all ${accountId === account.id
-                                                ? 'bg-slate-700 ring-2 ring-emerald-500'
-                                                : 'bg-slate-800 hover:bg-slate-700'
-                                                }`}
-                                        >
-                                            <div
-                                                className="w-8 h-8 rounded-lg flex items-center justify-center"
-                                                style={{ backgroundColor: `${account.color}20` }}
-                                            >
-                                                <IconComponent className="w-4 h-4" style={{ color: account.color }} />
-                                            </div>
-                                            <div className="flex-1 text-left overflow-hidden">
-                                                <p className="text-sm font-medium text-slate-200 truncate">{account.name}</p>
-                                                <p className="text-xs text-slate-500">
-                                                    {accountCurrency?.symbol}{account.balance?.toFixed(2) || '0.00'}
-                                                </p>
-                                            </div>
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                            {selectedAccount && convert(parseFloat(amount), currency, selectedAccount.currency || 'USD') > (selectedAccount.balance || 0) && (
-                                <p className="text-xs text-amber-400 mt-2">
-                                    ⚠️ Amount exceeds account balance
-                                </p>
-                            )}
-                        </div>
-                    )}
-
-                    {/* Category Grid */}
-                    <div>
-                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Category</label>
-                        <div className="grid grid-cols-5 gap-2 mt-2">
-                            {CATEGORIES.slice(0, 10).map((cat) => {
-                                const IconComponent = LucideIcons[cat.icon] || LucideIcons.CircleDot;
-                                return (
+                        {calcButtons.map((row, rowIdx) => (
+                            <React.Fragment key={rowIdx}>
+                                {row.map((btn) => (
                                     <button
-                                        key={cat.id}
+                                        key={btn}
                                         type="button"
-                                        onClick={() => setCategoryId(cat.id)}
-                                        className={`flex flex-col items-center p-2 rounded-xl transition-all ${categoryId === cat.id
-                                            ? 'bg-slate-700 ring-2 ring-emerald-500'
-                                            : 'bg-slate-800 hover:bg-slate-700'
+                                        onClick={() => handleCalcInput(btn)}
+                                        className={`py-3 rounded-xl font-bold text-lg transition-all active:scale-95 ${btn === 'DEL' ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30' :
+                                                btn === 'C' ? 'bg-amber-500/20 text-amber-400 hover:bg-amber-500/30' :
+                                                    btn === '=' ? 'bg-emerald-500 text-white hover:bg-emerald-600 row-span-2' : // Not actually row-span in this grid structure
+                                                        ['/', '*', '-', '+'].includes(btn) ? 'bg-slate-700 text-emerald-400 hover:bg-slate-600' :
+                                                            btn === '0' ? 'col-span-2 bg-slate-800 text-slate-200 hover:bg-slate-700' :
+                                                                'bg-slate-800 text-slate-200 hover:bg-slate-700'
                                             }`}
                                     >
-                                        <div
-                                            className="w-8 h-8 rounded-lg flex items-center justify-center mb-1"
-                                            style={{ backgroundColor: `${cat.color}20` }}
-                                        >
-                                            <IconComponent className="w-4 h-4" style={{ color: cat.color }} />
-                                        </div>
-                                        <span className="text-[10px] text-slate-400 truncate w-full text-center">{cat.name.split(' ')[0]}</span>
+                                        {btn === 'DEL' ? <Delete className="w-5 h-5 mx-auto" /> : btn}
                                     </button>
-                                );
-                            })}
-                        </div>
+                                ))}
+                            </React.Fragment>
+                        ))}
                     </div>
 
-                    {/* Note Input */}
+                    {/* Note Input - Moved Here */}
                     <div>
-                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Note (Optional)</label>
                         <input
                             type="text"
-                            placeholder="e.g. Lunch at cafe"
-                            className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-xl py-3 px-4 text-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none"
+                            placeholder="Add a note... (e.g. Lunch at cafe)"
+                            className="w-full bg-slate-800 border-none rounded-xl py-3 px-4 text-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none placeholder:text-slate-500"
                             value={note}
                             onChange={(e) => setNote(e.target.value)}
                         />
                     </div>
 
+                    {/* Account Selector */}
+                    {accounts.length > 0 && (
+                        <div className="grid grid-cols-2 gap-2">
+                            {accounts.map((account) => {
+                                const IconComponent = LucideIcons[account.icon] || LucideIcons.Wallet;
+                                const accountCurrency = getCurrencyByCode(account.currency || 'USD');
+                                return (
+                                    <button
+                                        key={account.id}
+                                        type="button"
+                                        onClick={() => setAccountId(account.id)}
+                                        className={`flex items-center gap-2 p-3 rounded-xl transition-all ${accountId === account.id
+                                            ? 'bg-slate-700 ring-1 ring-emerald-500'
+                                            : 'bg-slate-800 hover:bg-slate-700'
+                                            }`}
+                                    >
+                                        <div
+                                            className="w-8 h-8 rounded-lg flex items-center justify-center"
+                                            style={{ backgroundColor: `${account.color}20` }}
+                                        >
+                                            <IconComponent className="w-4 h-4" style={{ color: account.color }} />
+                                        </div>
+                                        <div className="flex-1 text-left overflow-hidden">
+                                            <p className="text-xs font-bold text-slate-200 truncate">{account.name}</p>
+                                            <p className="text-[10px] text-slate-500">
+                                                {accountCurrency?.symbol}{account.balance?.toFixed(2)}
+                                            </p>
+                                        </div>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    )}
+
+                    {/* Category Grid */}
+                    <div className="grid grid-cols-5 gap-2">
+                        {categories.slice(0, 10).map((cat) => {
+                            const IconComponent = LucideIcons[cat.icon] || LucideIcons.CircleDot;
+                            return (
+                                <button
+                                    key={cat.id}
+                                    type="button"
+                                    onClick={() => setCategoryId(cat.id)}
+                                    className={`flex flex-col items-center p-2 rounded-xl transition-all ${categoryId === cat.id
+                                        ? 'bg-emerald-500/20 ring-1 ring-emerald-500 text-emerald-400'
+                                        : 'bg-slate-800 hover:bg-slate-700 text-slate-400'
+                                        }`}
+                                >
+                                    <IconComponent className="w-5 h-5 mb-1" />
+                                    <span className="text-[10px] truncate w-full text-center">{cat.name.split(' ')[0]}</span>
+                                </button>
+                            );
+                        })}
+                    </div>
+
                     {/* Submit */}
                     <button
-                        type="submit"
-                        disabled={loading || parseFloat(amount) <= 0}
-                        className="w-full bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white font-bold py-4 rounded-xl transition-colors flex items-center justify-center gap-2"
+                        onClick={handleSubmit}
+                        disabled={loading}
+                        className="w-full bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white font-bold py-4 rounded-xl transition-colors flex items-center justify-center gap-2 mt-4"
                     >
-                        {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Add Expense'}
+                        {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Save Expense'}
                     </button>
-                </form>
+                </div>
             </div>
         </div>
     );

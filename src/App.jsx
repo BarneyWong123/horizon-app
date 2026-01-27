@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { FirebaseService } from './services/FirebaseService';
 import { ToastProvider } from './context/ToastContext';
 import { CurrencyProvider } from './context/CurrencyContext';
+import { CategoryProvider } from './context/CategoryContext';
 import Sidebar from './components/Layout/Sidebar';
 import Dashboard from './components/Dashboard/Dashboard';
 import SmartScan from './components/SmartScan/SmartScan';
@@ -10,6 +11,8 @@ import TransactionHistory from './components/Transactions/TransactionHistory';
 import AccountManager from './components/Accounts/AccountManager';
 import ChatAuditor from './components/ChatAuditor/ChatAuditor';
 import Login from './components/Auth/Login';
+import SettingsPage from './components/Settings/SettingsPage';
+import { ThemeProvider } from './context/ThemeContext';
 
 const App = () => {
   const [user, setUser] = useState(null);
@@ -33,33 +36,39 @@ const App = () => {
 
   return (
     <ToastProvider>
-      <CurrencyProvider>
-        <Router>
-          <div className="min-h-screen bg-slate-950 text-slate-200">
-            {!user ? (
-              <Routes>
-                <Route path="/login" element={<Login />} />
-                <Route path="*" element={<Navigate to="/login" />} />
-              </Routes>
-            ) : (
-              <div className="flex">
-                <Sidebar user={user} />
-                {/* Main content: padding for mobile header/bottom nav, left margin for desktop sidebar */}
-                <main className="flex-1 min-h-screen pt-16 pb-20 md:pt-0 md:pb-0 md:ml-64 md:p-6">
+      <ThemeProvider>
+        <CurrencyProvider>
+          <CategoryProvider user={user}>
+            <Router>
+              <div className="min-h-screen bg-slate-950 text-slate-200">
+                {!user ? (
                   <Routes>
-                    <Route path="/" element={<Dashboard user={user} />} />
-                    <Route path="/scan" element={<SmartScan user={user} />} />
-                    <Route path="/transactions" element={<TransactionHistory user={user} />} />
-                    <Route path="/accounts" element={<AccountManager user={user} />} />
-                    <Route path="/assistant" element={<ChatAuditor user={user} />} />
-                    <Route path="*" element={<Navigate to="/" />} />
+                    <Route path="/login" element={<Login />} />
+                    <Route path="*" element={<Navigate to="/login" />} />
                   </Routes>
-                </main>
+                ) : (
+                  <div className="flex">
+                    <Sidebar user={user} />
+                    {/* Main content: padding for mobile header/bottom nav, left margin for desktop sidebar */}
+                    <main className="flex-1 min-h-screen pt-16 pb-20 md:pt-0 md:pb-0 md:ml-64 md:p-6">
+                      <Routes>
+                        <Route path="/" element={<Dashboard user={user} />} />
+                        <Route path="/scan" element={<SmartScan user={user} />} />
+                        <Route path="/transactions" element={<TransactionHistory user={user} />} />
+                        <Route path="/accounts" element={<AccountManager user={user} />} />
+                        <Route path="/accounts" element={<AccountManager user={user} />} />
+                        <Route path="/assistant" element={<ChatAuditor user={user} />} />
+                        <Route path="/settings" element={<SettingsPage user={user} />} />
+                        <Route path="*" element={<Navigate to="/" />} />
+                      </Routes>
+                    </main>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        </Router>
-      </CurrencyProvider>
+            </Router>
+          </CategoryProvider>
+        </CurrencyProvider>
+      </ThemeProvider>
     </ToastProvider>
   );
 };

@@ -1,10 +1,11 @@
 import React from 'react';
 import * as LucideIcons from 'lucide-react';
-import { getCategoryById } from '../../data/categories';
+import { useCategory } from '../../context/CategoryContext';
 import { getCurrencyByCode } from '../../data/currencies';
 import { Receipt } from 'lucide-react';
 
 const TransactionList = ({ transactions, onEdit }) => {
+    const { getCategoryById } = useCategory();
     if (transactions.length === 0) {
         return (
             <div className="text-center py-8">

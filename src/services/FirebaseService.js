@@ -137,6 +137,101 @@ export const FirebaseService = {
             });
         }
         return null;
+    },
+
+    // Category Operations
+    async addCategory(uid, categoryData) {
+        const categoriesRef = collection(db, "users", uid, "categories");
+        // If an ID is provided (like from defaults), try to use it as document ID or just store it
+        // Ideally defaults should have unique IDs. Let's cleaner just let Firestore generate IDs 
+        // OR use the 'id' field from defaults as the actual ID? 
+        // Using 'id' field is safer for migration but Firestore auto-ID is cleaner.
+        // Let's store the 'id' field as 'slug' or just 'id' inside the data, and let doc ID be auto.
+
+        return addDoc(categoriesRef, {
+            ...categoryData,
+            createdAt: serverTimestamp()
+        });
+    },
+
+    async updateCategory(uid, categoryId, data) {
+        const categoryRef = doc(db, "users", uid, "categories", categoryId);
+        return updateDoc(categoryRef, {
+            ...data,
+            updatedAt: serverTimestamp()
+        });
+    },
+
+    async deleteCategory(uid, categoryId) {
+        const categoryRef = doc(db, "users", uid, "categories", categoryId);
+        return deleteDoc(categoryRef);
+    },
+
+    subscribeToCategories(uid, callback) {
+        const categoriesRef = collection(db, "users", uid, "categories");
+        const q = query(categoriesRef, orderBy("createdAt", "asc"));
+
+        return onSnapshot(q, (snapshot) => {
+            const categories = snapshot.docs.map(doc => {
+                const data = doc.data();
+                return {
+                    ...data,
+                    docId: doc.id, // Actual Firestore ID
+                    id: data.id || doc.id // Use internal ID if present (migration), else doc ID
+                };
+            });
+            callback(categories);
+        });
+    },
+
+    // Chat Operations
+    async addChatMessage(uid, message) {
+        const chatsRef = collection(db, "users", uid, "chats");
+        return addDoc(chatsRef, {
+            ...message,
+            createdAt: serverTimestamp()
+        });
+    },
+
+    subscribeToChat(uid, callback) {
+        const chatsRef = collection(db, "users", uid, "chats");
+        const q = query(chatsRef, orderBy("createdAt", "asc"));
+
+        return onSnapshot(q, (snapshot) => {
+            const messages = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+            callback(messages);
+        });
+    },
+
+    async clearChatHistory(uid) {
+        const chatsRef = collection(db, "users", uid, "chats");
+        const snapshot = await getDocs(chatsRef);
+        const batchPromises = snapshot.docs.map(doc => deleteDoc(doc.ref));
+        await Promise.all(batchPromises);
+    },
+
+    async deleteUserData(uid) {
+        // Helper to delete all docs in a collection
+        const deleteCollection = async (collName) => {
+            const ref = collection(db, "users", uid, collName);
+            const snapshot = await getDocs(ref);
+            const promises = snapshot.docs.map(doc => deleteDoc(doc.ref));
+            await Promise.all(promises);
+        };
+
+        await Promise.all([
+            deleteCollection("transactions"),
+            deleteCollection("accounts"),
+            deleteCollection("categories"),
+            deleteCollection("chats")
+        ]);
+
+        // Finally delete the user document itself if it exists (though we store mostly in subcollections)
+        // Adjust if we have a top-level user doc. We mostly use subcollections under the UID.
+        // Also delete the top-level user doc ref if we used one, but here we just used hierarchy.
     }
 };
 

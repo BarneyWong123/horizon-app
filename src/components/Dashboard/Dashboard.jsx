@@ -1,26 +1,32 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FirebaseService } from '../../services/FirebaseService';
-import SpendingChart from './SpendingChart';
+import AnalyticsSection from './AnalyticsSection';
 import TransactionList from './TransactionList';
 import AccountCard from './AccountCard';
 import FloatingActionButton from './FloatingActionButton';
 import QuickAddModal from './QuickAddModal';
 import TransactionEditModal from './TransactionEditModal';
-import { Wallet, TrendingDown, Calendar, ChevronRight, Filter, ChevronDown, CalendarDays, X } from 'lucide-react';
+import CategorySettingsModal from '../Settings/CategorySettingsModal';
+import { Wallet, TrendingDown, Calendar, ChevronRight, Filter, ChevronDown, CalendarDays, X, Settings2 } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
-import { CATEGORIES } from '../../data/categories';
+import { useCategory } from '../../context/CategoryContext';
+
 import { useCurrency } from '../../context/CurrencyContext';
+import BudgetProgress from './BudgetProgress';
 
 const Dashboard = ({ user }) => {
     const navigate = useNavigate();
     const { formatAmount, convert } = useCurrency();
+    const { categories } = useCategory();
     const [transactions, setTransactions] = useState([]);
     const [accounts, setAccounts] = useState([]);
     const [selectedAccountId, setSelectedAccountId] = useState(null);
     const [loading, setLoading] = useState(true);
     const [showQuickAdd, setShowQuickAdd] = useState(false);
     const [editingTransaction, setEditingTransaction] = useState(null);
+    const [showCategorySettings, setShowCategorySettings] = useState(false);
+    const [averageType, setAverageType] = useState('daily'); // 'daily' | 'monthly'
 
     // New filter states
     const [selectedCategory, setSelectedCategory] = useState(null);
@@ -90,7 +96,26 @@ const Dashboard = ({ user }) => {
         }, 0);
 
         const dayOfMonth = new Date().getDate() || 1;
+        const dayOfMonth = new Date().getDate() || 1;
         const dailyRate = totalSpent / dayOfMonth;
+        const monthlyRate = totalSpent; // If filtering by month, totalSpent is the monthly spend so far. 
+        // If "All Time", we need to divide by months. For simplicity, let's just show Total vs Daily.
+        // Actually, if filter is 'month', Daily Avg = Spent / DayOfMonth. Monthly Avg = Spent (Projected?) or just Total?
+        // User asked for "Daily average interchangeable daily and monthly average".
+        // Let's interpret: "Daily Average" vs "Monthly Average".
+        // If viewing "Today", Monthly Avg doesn't make sense.
+        // If viewing "Month", Daily = Spent/Day, Monthly = Spent (so far).
+        // Let's stick to: Daily Rate and Projected Monthly Rate? or just Average per month if viewing "Year".
+
+        // Simple logic for now:
+        // Daily Rate = totalSpent / daysPassed
+        // Monthly Rate = totalSpent / monthsPassed (if > 1 month) or totalSpent (if this month)
+
+        let displayAverage = dailyRate;
+        if (averageType === 'monthly') {
+            // Rough approximation for now, or just simply Total Spent if in current month context
+            displayAverage = dailyRate * 30;
+        }
 
         // Calculate days until zero (if user has balance)
         const totalBalance = accounts.reduce((acc, curr) => {
@@ -108,10 +133,10 @@ const Dashboard = ({ user }) => {
             return acc;
         }, {});
 
-        return { totalSpent, dailyRate, totalBalance, daysUntilZero, categoryTotals };
-    }, [filteredTransactions, accounts, convert]);
+        return { totalSpent, dailyRate, displayAverage, totalBalance, daysUntilZero, categoryTotals };
+    }, [filteredTransactions, accounts, convert, averageType]);
 
-    const selectedCategoryData = selectedCategory ? CATEGORIES.find(c => c.id === selectedCategory) : null;
+    const selectedCategoryData = selectedCategory ? categories.find(c => c.id === selectedCategory) : null;
     const CategoryIcon = selectedCategoryData ? (LucideIcons[selectedCategoryData.icon] || LucideIcons.CircleDot) : null;
 
     if (loading) {
@@ -247,7 +272,14 @@ const Dashboard = ({ user }) => {
                             >
                                 All Categories
                             </button>
-                            {CATEGORIES.filter(c => c.id !== 'income' && c.id !== 'transfer').map(cat => {
+                            <button
+                                onClick={() => { setShowCategorySettings(true); setShowCategoryFilter(false); }}
+                                className="w-full px-3 py-2 text-left text-sm hover:bg-slate-700 text-blue-400 flex items-center gap-2 border-b border-slate-700 mb-1"
+                            >
+                                <Settings2 className="w-3.5 h-3.5" />
+                                Manage Categories
+                            </button>
+                            {categories.filter(c => c.id !== 'income' && c.id !== 'transfer').map(cat => {
                                 const Icon = LucideIcons[cat.icon] || LucideIcons.CircleDot;
                                 return (
                                     <button
@@ -314,11 +346,19 @@ const Dashboard = ({ user }) => {
 
                 <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-3 md:p-4">
                     <div className="flex items-center justify-between mb-2">
-                        <span className="text-slate-500 text-xs font-medium">Daily Average</span>
+                        <button
+                            onClick={() => setAverageType(prev => prev === 'daily' ? 'monthly' : 'daily')}
+                            className="text-slate-500 text-xs font-medium flex items-center gap-1 hover:text-white transition-colors"
+                        >
+                            {averageType === 'daily' ? 'Daily Average' : 'Monthly Average'}
+                            <LucideIcons.ArrowLeftRight className="w-3 h-3" />
+                        </button>
                         <TrendingDown className="text-amber-500 w-4 h-4" />
                     </div>
-                    <p className="text-xl md:text-2xl font-bold text-white">{formatAmount(stats.dailyRate)}</p>
-                    <p className="text-xs text-slate-500 mt-1">Per day</p>
+                    <p className="text-xl md:text-2xl font-bold text-white">{formatAmount(averageType === 'daily' ? stats.dailyRate : stats.displayAverage)}</p>
+                    <p className="text-xs text-slate-500 mt-1">
+                        {averageType === 'daily' ? 'Per day' : 'Per 30 days'}
+                    </p>
                 </div>
 
                 <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-3 md:p-4">
@@ -331,8 +371,14 @@ const Dashboard = ({ user }) => {
                 </div>
 
                 <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-3 md:p-4">
-                    <div className="flex items-center justify-between mb-2">
-                        <span className="text-slate-500 text-xs font-medium">Days Left</span>
+                    <div className="flex items-center justify-between mb-2 group relative">
+                        <span className="text-slate-500 text-xs font-medium flex items-center gap-1 cursor-help">
+                            Days Left
+                            <LucideIcons.Info className="w-3 h-3" />
+                        </span>
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-slate-800 text-slate-200 text-xs rounded-lg border border-slate-700 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                            Estimated time until your total balance reaches zero at your current daily spending rate.
+                        </div>
                         <Calendar className="text-purple-500 w-4 h-4" />
                     </div>
                     <p className={`text-xl md:text-2xl font-bold ${stats.daysUntilZero > 30 ? 'text-emerald-400' : stats.daysUntilZero > 14 ? 'text-amber-400' : 'text-red-400'}`}>
@@ -342,13 +388,27 @@ const Dashboard = ({ user }) => {
                 </div>
             </div>
 
-            {/* Spending Chart */}
-            <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4">
-                <h3 className="text-slate-400 text-sm font-medium mb-4">Spending Trend</h3>
-                <div className="h-[200px] md:h-[250px]">
-                    <SpendingChart transactions={filteredTransactions} />
-                </div>
+            {/* Quick Access Widgets */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <button
+                    onClick={() => navigate('/scan')}
+                    className="flex items-center gap-4 bg-slate-900/50 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500/50 p-4 rounded-xl transition-all group"
+                >
+                    <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <LucideIcons.ScanLine className="w-6 h-6 text-emerald-500" />
+                    </div>
+                    <div className="text-left">
+                        <h4 className="font-bold text-slate-200">Scan Receipt</h4>
+                        <p className="text-xs text-slate-400">AI-powered extraction</p>
+                    </div>
+                </button>
             </div>
+
+            {/* Analytics Section - New Visuals */}
+            <AnalyticsSection transactions={filteredTransactions} />
+
+            {/* Budget Progress Section */}
+            <BudgetProgress transactions={transactions} />
 
             {/* Recent Transactions */}
             <div className="bg-slate-900/50 border border-slate-800 rounded-xl overflow-hidden">
@@ -404,6 +464,12 @@ const Dashboard = ({ user }) => {
                 onClose={() => setEditingTransaction(null)}
                 user={user}
                 transaction={editingTransaction}
+            />
+
+            {/* Category Settings Modal */}
+            <CategorySettingsModal
+                isOpen={showCategorySettings}
+                onClose={() => setShowCategorySettings(false)}
             />
         </div>
     );

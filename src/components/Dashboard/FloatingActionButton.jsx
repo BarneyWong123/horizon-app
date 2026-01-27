@@ -8,6 +8,7 @@ const FloatingActionButton = ({ onQuickAdd, onScan }) => {
         <div className="fixed bottom-6 right-6 z-40">
             {/* Sub-buttons */}
             <div className={`absolute bottom-16 right-0 flex flex-col gap-3 transition-all duration-300 ${isOpen ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
+                {/* Scan Button - Hidden as per user request (moved to Dashboard Widget)
                 <button
                     onClick={() => { onScan(); setIsOpen(false); }}
                     className="w-12 h-12 bg-blue-500 hover:bg-blue-600 rounded-full flex items-center justify-center shadow-lg transition-all"
@@ -15,6 +16,7 @@ const FloatingActionButton = ({ onQuickAdd, onScan }) => {
                 >
                     <Camera className="w-5 h-5 text-white" />
                 </button>
+                */}
                 <button
                     onClick={() => { onQuickAdd(); setIsOpen(false); }}
                     className="w-12 h-12 bg-emerald-500 hover:bg-emerald-600 rounded-full flex items-center justify-center shadow-lg transition-all"

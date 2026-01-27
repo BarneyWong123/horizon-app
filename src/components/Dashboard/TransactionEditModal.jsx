@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { X, Loader2, Trash2, ChevronDown, ChevronUp, Receipt } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
-import { CATEGORIES } from '../../data/categories';
 import { CURRENCIES, getCurrencyByCode } from '../../data/currencies';
 import { FirebaseService } from '../../services/FirebaseService';
 import { useToast } from '../../context/ToastContext';
+import { useCategory } from '../../context/CategoryContext';
 
 const TransactionEditModal = ({ isOpen, onClose, user, transaction }) => {
     const [amount, setAmount] = useState('');
@@ -17,6 +17,7 @@ const TransactionEditModal = ({ isOpen, onClose, user, transaction }) => {
     const [showItems, setShowItems] = useState(false);
     const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
     const { showToast } = useToast();
+    const { categories } = useCategory();
 
     // Sync state with transaction prop when it changes
     useEffect(() => {
@@ -43,7 +44,7 @@ const TransactionEditModal = ({ isOpen, onClose, user, transaction }) => {
             await FirebaseService.updateTransaction(user.uid, transaction.id, {
                 total: parseFloat(amount),
                 category: categoryId,
-                merchant: note || CATEGORIES.find(c => c.id === categoryId)?.name || 'Expense',
+                merchant: note || categories.find(c => c.id === categoryId)?.name || 'Expense',
                 date: date,
                 currency: currency
             });
@@ -180,7 +181,7 @@ const TransactionEditModal = ({ isOpen, onClose, user, transaction }) => {
                     <div>
                         <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Category</label>
                         <div className="grid grid-cols-5 gap-2 mt-2">
-                            {CATEGORIES.slice(0, 10).map((cat) => {
+                            {categories.slice(0, 10).map((cat) => {
                                 const IconComponent = LucideIcons[cat.icon] || LucideIcons.CircleDot;
                                 return (
                                     <button
