@@ -10,9 +10,11 @@ import TransactionEditModal from './TransactionEditModal';
 import { Wallet, TrendingDown, Calendar, ChevronRight, Filter, ChevronDown } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { CATEGORIES } from '../../data/categories';
+import { useCurrency } from '../../context/CurrencyContext';
 
 const Dashboard = ({ user }) => {
     const navigate = useNavigate();
+    const { formatAmount } = useCurrency();
     const [transactions, setTransactions] = useState([]);
     const [accounts, setAccounts] = useState([]);
     const [selectedAccountId, setSelectedAccountId] = useState(null);
@@ -119,8 +121,8 @@ const Dashboard = ({ user }) => {
                             key={period.id}
                             onClick={() => setTimePeriod(period.id)}
                             className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${timePeriod === period.id
-                                    ? 'bg-emerald-500 text-white'
-                                    : 'text-slate-400 hover:text-white'
+                                ? 'bg-emerald-500 text-white'
+                                : 'text-slate-400 hover:text-white'
                                 }`}
                         >
                             {period.label}
@@ -133,8 +135,8 @@ const Dashboard = ({ user }) => {
                     <button
                         onClick={() => setShowCategoryFilter(!showCategoryFilter)}
                         className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all ${selectedCategory
-                                ? 'bg-slate-700 text-white'
-                                : 'bg-slate-800 text-slate-400 hover:text-white'
+                            ? 'bg-slate-700 text-white'
+                            : 'bg-slate-800 text-slate-400 hover:text-white'
                             }`}
                     >
                         {selectedCategory ? (
@@ -217,7 +219,7 @@ const Dashboard = ({ user }) => {
                         <span className="text-slate-500 text-xs font-medium">Total Spent</span>
                         <Wallet className="text-emerald-500 w-4 h-4" />
                     </div>
-                    <p className="text-xl md:text-2xl font-bold text-white">${stats.totalSpent.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                    <p className="text-xl md:text-2xl font-bold text-white">{formatAmount(stats.totalSpent)}</p>
                     <p className="text-xs text-slate-500 mt-1">
                         {timePeriod === 'month' ? 'This month' : timePeriod === 'year' ? 'This year' : 'All time'}
                         {selectedCategory && ` • ${selectedCategoryData?.name}`}
@@ -229,7 +231,7 @@ const Dashboard = ({ user }) => {
                         <span className="text-slate-500 text-xs font-medium">Daily Average</span>
                         <TrendingDown className="text-amber-500 w-4 h-4" />
                     </div>
-                    <p className="text-xl md:text-2xl font-bold text-white">${stats.dailyRate.toFixed(2)}</p>
+                    <p className="text-xl md:text-2xl font-bold text-white">{formatAmount(stats.dailyRate)}</p>
                     <p className="text-xs text-slate-500 mt-1">Per day</p>
                 </div>
 
@@ -238,7 +240,7 @@ const Dashboard = ({ user }) => {
                         <span className="text-slate-500 text-xs font-medium">Balance</span>
                         <Wallet className="text-blue-500 w-4 h-4" />
                     </div>
-                    <p className="text-xl md:text-2xl font-bold text-white">${stats.totalBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                    <p className="text-xl md:text-2xl font-bold text-white">{formatAmount(stats.totalBalance)}</p>
                     <p className="text-xs text-slate-500 mt-1">All accounts</p>
                 </div>
 

@@ -96,5 +96,54 @@ Output JSON only:
             console.error("Error in chat auditor:", error);
             throw error;
         }
+    },
+
+    /**
+     * Get current exchange rates from OpenAI
+     * Returns rates relative to USD as base currency
+     */
+    async getExchangeRates() {
+        try {
+            const response = await openai.chat.completions.create({
+                model: "gpt-4o-mini",
+                messages: [
+                    {
+                        role: "system",
+                        content: `You are a financial data assistant. Provide current approximate exchange rates for major currencies relative to 1 USD. 
+Be as accurate as possible based on your knowledge of current market rates.
+Output JSON only with currency codes as keys and rates as values.
+Include these currencies: USD, EUR, GBP, MYR, THB, SGD, JPY, CNY, AUD, INR, PHP, IDR, VND, KRW, HKD.
+Example format: { "USD": 1, "EUR": 0.92, "GBP": 0.79, ... }`
+                    },
+                    {
+                        role: "user",
+                        content: "Provide current exchange rates for all listed currencies relative to 1 USD."
+                    }
+                ],
+                response_format: { type: "json_object" },
+            });
+
+            return JSON.parse(response.choices[0].message.content);
+        } catch (error) {
+            console.error("Error fetching exchange rates:", error);
+            // Return fallback rates if API fails
+            return {
+                USD: 1,
+                EUR: 0.92,
+                GBP: 0.79,
+                MYR: 4.47,
+                THB: 35.5,
+                SGD: 1.34,
+                JPY: 149.5,
+                CNY: 7.24,
+                AUD: 1.53,
+                INR: 83.1,
+                PHP: 56.2,
+                IDR: 15850,
+                VND: 24500,
+                KRW: 1320,
+                HKD: 7.82
+            };
+        }
     }
 };

@@ -1,6 +1,8 @@
 import React from 'react';
 import * as LucideIcons from 'lucide-react';
 import { getCategoryById } from '../../data/categories';
+import { getCurrencyByCode } from '../../data/currencies';
+import { Receipt } from 'lucide-react';
 
 const TransactionList = ({ transactions, onEdit }) => {
     if (transactions.length === 0) {
@@ -17,6 +19,8 @@ const TransactionList = ({ transactions, onEdit }) => {
             {transactions.map((t) => {
                 const category = getCategoryById(t.category);
                 const IconComponent = LucideIcons[category.icon] || LucideIcons.CircleDot;
+                const currencyInfo = getCurrencyByCode(t.currency || 'USD');
+                const hasItems = t.items && t.items.length > 0;
 
                 return (
                     <div
@@ -34,15 +38,28 @@ const TransactionList = ({ transactions, onEdit }) => {
 
                         {/* Details */}
                         <div className="flex-1 min-w-0">
-                            <p className="font-medium text-slate-200 truncate">{t.merchant}</p>
+                            <div className="flex items-center gap-2">
+                                <p className="font-medium text-slate-200 truncate">{t.merchant}</p>
+                                {hasItems && (
+                                    <span className="flex items-center gap-1 text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded-full">
+                                        <Receipt className="w-2.5 h-2.5" />
+                                        {t.items.length}
+                                    </span>
+                                )}
+                            </div>
                             <p className="text-xs text-slate-500">
                                 {category.name} • {new Date(t.date || t.createdAt?.toDate()).toLocaleDateString()}
                             </p>
                         </div>
 
-                        {/* Amount */}
+                        {/* Amount with Currency */}
                         <div className="text-right">
-                            <p className="font-bold text-white">${(t.total || 0).toFixed(2)}</p>
+                            <p className="font-bold text-white">
+                                {currencyInfo?.symbol || '$'}{(t.total || 0).toFixed(2)}
+                            </p>
+                            {t.currency && t.currency !== 'USD' && (
+                                <p className="text-[10px] text-slate-500">{t.currency}</p>
+                            )}
                         </div>
                     </div>
                 );

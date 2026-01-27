@@ -4,6 +4,8 @@ import * as LucideIcons from 'lucide-react';
 import { OpenAIService } from '../../services/OpenAIService';
 import { FirebaseService } from '../../services/FirebaseService';
 import { CATEGORIES, getCategoryById } from '../../data/categories';
+import { useToast } from '../../context/ToastContext';
+import { useCurrency } from '../../context/CurrencyContext';
 import ImageUploader from './ImageUploader';
 
 const SmartScan = ({ user }) => {
@@ -11,6 +13,8 @@ const SmartScan = ({ user }) => {
     const [result, setResult] = useState(null);
     const [error, setError] = useState(null);
     const [note, setNote] = useState('');
+    const { showToast } = useToast();
+    const { formatAmount } = useCurrency();
 
     const handleImageUpload = async (base64Image) => {
         setLoading(true);
@@ -22,8 +26,10 @@ const SmartScan = ({ user }) => {
                 inputType: 'image'
             });
             setResult(analysis);
+            showToast('Receipt scanned and saved!', 'success');
         } catch (err) {
             setError("Failed to scan receipt. Please try again.");
+            showToast('Failed to scan receipt', 'error');
             console.error(err);
         } finally {
             setLoading(false);
@@ -50,8 +56,10 @@ const SmartScan = ({ user }) => {
             });
             setResult(parsed);
             setNote('');
+            showToast('Expense added successfully!', 'success');
         } catch (err) {
             setError("Failed to parse note. Please try again.");
+            showToast('Failed to parse note', 'error');
         } finally {
             setLoading(false);
         }
@@ -134,8 +142,8 @@ const SmartScan = ({ user }) => {
                         <div>
                             <p className="text-slate-500">Sentiment</p>
                             <span className={`inline-block mt-1 px-2 py-1 rounded-full text-xs font-bold ${result.sentiment === 'Survival' ? 'bg-blue-500/20 text-blue-400' :
-                                    result.sentiment === 'Investment' ? 'bg-emerald-500/20 text-emerald-400' :
-                                        'bg-red-500/20 text-red-400'
+                                result.sentiment === 'Investment' ? 'bg-emerald-500/20 text-emerald-400' :
+                                    'bg-red-500/20 text-red-400'
                                 }`}>
                                 {result.sentiment}
                             </span>

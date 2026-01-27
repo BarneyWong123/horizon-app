@@ -2,6 +2,7 @@ import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Scan, Receipt, Wallet, MessageSquare, LogOut, Compass } from 'lucide-react';
 import { FirebaseService } from '../../services/FirebaseService';
+import CurrencySelector from '../UI/CurrencySelector';
 
 const Sidebar = ({ user }) => {
     const location = useLocation();
@@ -57,8 +58,14 @@ const Sidebar = ({ user }) => {
                 </div>
 
                 {/* User Section */}
-                <div className="border-t border-slate-800 pt-4">
-                    <div className="flex items-center gap-3 px-3 mb-4">
+                <div className="border-t border-slate-800 pt-4 space-y-3">
+                    {/* Currency Selector */}
+                    <div className="px-1">
+                        <p className="text-xs text-slate-500 mb-2 px-2">Currency</p>
+                        <CurrencySelector />
+                    </div>
+
+                    <div className="flex items-center gap-3 px-3">
                         <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700">
                             <span className="text-xs font-bold text-slate-400">
                                 {user.email?.[0].toUpperCase()}
@@ -89,8 +96,8 @@ const Sidebar = ({ user }) => {
                                 key={item.to}
                                 to={item.to}
                                 className={`flex flex-col items-center py-2 px-3 rounded-lg transition-all ${isActive
-                                        ? 'text-emerald-500'
-                                        : 'text-slate-500'
+                                    ? 'text-emerald-500'
+                                    : 'text-slate-500'
                                     }`}
                             >
                                 <item.icon className="w-5 h-5" />
