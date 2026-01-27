@@ -18,7 +18,7 @@ const TransactionHistory = ({ user }) => {
         const unsubscribe = FirebaseService.subscribeToTransactions(user.uid, (data) => {
             setTransactions(data);
             setLoading(false);
-        });
+        }, { limit: 500 });
         return () => unsubscribe();
     }, [user.uid]);
 

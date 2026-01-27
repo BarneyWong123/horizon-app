@@ -15,7 +15,9 @@ import {
     query,
     onSnapshot,
     serverTimestamp,
-    getDocs
+    getDocs,
+    limit,
+    orderBy
 } from "firebase/firestore";
 import { auth, db } from "../config/firebase";
 
@@ -66,35 +68,24 @@ export const FirebaseService = {
         return deleteDoc(transactionRef);
     },
 
-    subscribeToTransactions(uid, callback, accountId = null) {
+    subscribeToTransactions(uid, callback, options = {}) {
+        const { accountId, limit: limitCount } = options;
         const transactionsRef = collection(db, "users", uid, "transactions");
-        // Removed orderBy to avoid potential index issues. Sorting client-side.
-        const q = query(transactionsRef);
+
+        // Use server-side sorting on 'date' (single field index exists by default)
+        const constraints = [orderBy("date", "desc")];
+
+        if (limitCount) {
+            constraints.push(limit(limitCount));
+        }
+
+        const q = query(transactionsRef, ...constraints);
 
         return onSnapshot(q, (snapshot) => {
             let transactions = snapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data()
             }));
-
-            // Client-side sort
-            try {
-                transactions.sort((a, b) => {
-                    const getTime = (t) => {
-                        if (t.createdAt && typeof t.createdAt.toMillis === 'function') {
-                            return t.createdAt.toMillis();
-                        }
-                        if (t.date) {
-                            const time = new Date(t.date).getTime();
-                            return isNaN(time) ? 0 : time;
-                        }
-                        return 0;
-                    };
-                    return getTime(b) - getTime(a);
-                });
-            } catch (e) {
-                console.error("Error sorting transactions:", e);
-            }
 
             if (accountId) {
                 transactions = transactions.filter(t => t.accountId === accountId);
