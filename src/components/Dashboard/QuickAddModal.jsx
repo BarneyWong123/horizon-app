@@ -6,6 +6,7 @@ import { FirebaseService } from '../../services/FirebaseService';
 import { useToast } from '../../context/ToastContext';
 import { useCurrency } from '../../context/CurrencyContext';
 import { useCategory } from '../../context/CategoryContext';
+import { CURRENCIES, getCurrencyByCode } from '../../data/currencies';
 
 const QuickAddModal = ({ isOpen, onClose, user, accounts, selectedAccountId: defaultAccountId }) => {
     const navigate = useNavigate();
