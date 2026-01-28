@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { X, Loader2, Delete, Wallet, ChevronDown } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { FirebaseService } from '../../services/FirebaseService';
@@ -7,6 +8,7 @@ import { useCurrency } from '../../context/CurrencyContext';
 import { useCategory } from '../../context/CategoryContext';
 
 const QuickAddModal = ({ isOpen, onClose, user, accounts, selectedAccountId: defaultAccountId }) => {
+    const navigate = useNavigate();
     const [amount, setAmount] = useState('0');
     const [note, setNote] = useState('');
     const [categoryId, setCategoryId] = useState('food');
@@ -131,12 +133,16 @@ const QuickAddModal = ({ isOpen, onClose, user, accounts, selectedAccountId: def
                 const result = Function('"use strict";return (' + safeExpression + ')')();
                 finalAmount = String(result);
             } catch (e) {
-                return; // Don't submit if error
+                showToast('Invalid calculation', 'error');
+                return;
             }
         }
 
         const numAmount = parseFloat(finalAmount);
-        if (!numAmount || numAmount <= 0) return;
+        if (!numAmount || numAmount <= 0 || isNaN(numAmount)) {
+            showToast('Please enter a valid amount', 'error');
+            return;
+        }
 
         setLoading(true);
         try {
@@ -189,10 +195,24 @@ const QuickAddModal = ({ isOpen, onClose, user, accounts, selectedAccountId: def
             <div className="w-full max-w-md bg-slate-900 rounded-2xl border border-slate-800 shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
                 {/* Header */}
                 <div className="flex items-center justify-between p-4 border-b border-slate-800">
-                    <h3 className="text-lg font-bold text-white">Add Expense</h3>
-                    <button onClick={onClose} className="text-slate-400 hover:text-white">
-                        <X className="w-5 h-5" />
-                    </button>
+                    <h3 className="text-lg font-bold text-white">Add Transaction</h3>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => {
+                                window.location.href = '/scan'; // Force navigate or use navigate hook if available. 
+                                // Since we are in modal, useNavigate hook should work if parent passed it or we use it.
+                                // But component doesn't have useNavigate. Let's fix that or use window.location as fallback.
+                                // Actually, I'll update component to use useNavigate.
+                            }}
+                            className="flex items-center gap-1 px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 rounded-lg text-xs font-medium transition-colors"
+                        >
+                            <LucideIcons.ScanLine className="w-3.5 h-3.5" />
+                            Scan Receipt
+                        </button>
+                        <button onClick={onClose} className="text-slate-400 hover:text-white">
+                            <X className="w-5 h-5" />
+                        </button>
+                    </div>
                 </div>
 
                 <div className="p-4 space-y-4">
@@ -247,11 +267,11 @@ const QuickAddModal = ({ isOpen, onClose, user, accounts, selectedAccountId: def
                                         type="button"
                                         onClick={() => handleCalcInput(btn)}
                                         className={`py-3 rounded-xl font-bold text-lg transition-all active:scale-95 ${btn === 'DEL' ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30' :
-                                                btn === 'C' ? 'bg-amber-500/20 text-amber-400 hover:bg-amber-500/30' :
-                                                    btn === '=' ? 'bg-emerald-500 text-white hover:bg-emerald-600 row-span-2' : // Not actually row-span in this grid structure
-                                                        ['/', '*', '-', '+'].includes(btn) ? 'bg-slate-700 text-emerald-400 hover:bg-slate-600' :
-                                                            btn === '0' ? 'col-span-2 bg-slate-800 text-slate-200 hover:bg-slate-700' :
-                                                                'bg-slate-800 text-slate-200 hover:bg-slate-700'
+                                            btn === 'C' ? 'bg-amber-500/20 text-amber-400 hover:bg-amber-500/30' :
+                                                btn === '=' ? 'bg-emerald-500 text-white hover:bg-emerald-600 row-span-2' : // Not actually row-span in this grid structure
+                                                    ['/', '*', '-', '+'].includes(btn) ? 'bg-slate-700 text-emerald-400 hover:bg-slate-600' :
+                                                        btn === '0' ? 'col-span-2 bg-slate-800 text-slate-200 hover:bg-slate-700' :
+                                                            'bg-slate-800 text-slate-200 hover:bg-slate-700'
                                             }`}
                                     >
                                         {btn === 'DEL' ? <Delete className="w-5 h-5 mx-auto" /> : btn}

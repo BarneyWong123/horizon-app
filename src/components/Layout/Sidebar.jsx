@@ -93,10 +93,7 @@ const Sidebar = ({ user }) => {
                         </div>
                     )}
 
-                    {/* Currency Selector */}
-                    <div className="px-1">
-                        <CurrencySelector />
-                    </div>
+
 
                     <button
                         onClick={() => setShowUserMenu(!showUserMenu)}

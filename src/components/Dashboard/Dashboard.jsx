@@ -332,14 +332,18 @@ const Dashboard = ({ user }) => {
 
             {/* Stats Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-                <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-3 md:p-4">
+                <div
+                    onClick={() => setTimePeriod(prev => prev === 'year' ? 'month' : 'year')}
+                    className="bg-slate-900/50 border border-slate-800 rounded-xl p-3 md:p-4 cursor-pointer hover:bg-slate-800 transition-colors"
+                >
                     <div className="flex items-center justify-between mb-2">
                         <span className="text-slate-500 text-xs font-medium">Total Spent</span>
                         <Wallet className="text-emerald-500 w-4 h-4" />
                     </div>
                     <p className="text-xl md:text-2xl font-bold text-white">{formatAmount(stats.totalSpent)}</p>
-                    <p className="text-xs text-slate-500 mt-1">
+                    <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
                         {timePeriod === 'month' ? 'This month' : timePeriod === 'year' ? 'This year' : 'All time'}
+                        <LucideIcons.RefreshCw className="w-3 h-3 opacity-50" />
                         {selectedCategory && ` • ${selectedCategoryData?.name}`}
                     </p>
                 </div>
@@ -361,13 +365,28 @@ const Dashboard = ({ user }) => {
                     </p>
                 </div>
 
-                <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-3 md:p-4">
+                <div
+                    onClick={() => {
+                        // Cycle through accounts: null (All) -> acc1 -> acc2 -> ... -> null
+                        const currentIdx = selectedAccountId ? accounts.findIndex(a => a.id === selectedAccountId) : -1;
+                        const nextIdx = currentIdx + 1;
+                        if (nextIdx < accounts.length) {
+                            setSelectedAccountId(accounts[nextIdx].id);
+                        } else {
+                            setSelectedAccountId(null);
+                        }
+                    }}
+                    className="bg-slate-900/50 border border-slate-800 rounded-xl p-3 md:p-4 cursor-pointer hover:bg-slate-800 transition-colors"
+                >
                     <div className="flex items-center justify-between mb-2">
                         <span className="text-slate-500 text-xs font-medium">Balance</span>
                         <Wallet className="text-blue-500 w-4 h-4" />
                     </div>
                     <p className="text-xl md:text-2xl font-bold text-white">{formatAmount(stats.totalBalance)}</p>
-                    <p className="text-xs text-slate-500 mt-1">All accounts</p>
+                    <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
+                        {selectedAccountId ? accounts.find(a => a.id === selectedAccountId)?.name : 'All accounts'}
+                        <LucideIcons.RefreshCw className="w-3 h-3 opacity-50" />
+                    </p>
                 </div>
 
                 <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-3 md:p-4">
@@ -391,15 +410,15 @@ const Dashboard = ({ user }) => {
             {/* Quick Access Widgets */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <button
-                    onClick={() => navigate('/scan')}
+                    onClick={() => setShowQuickAdd(true)}
                     className="flex items-center gap-4 bg-slate-900/50 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500/50 p-4 rounded-xl transition-all group"
                 >
                     <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                        <LucideIcons.ScanLine className="w-6 h-6 text-emerald-500" />
+                        <LucideIcons.Plus className="w-6 h-6 text-emerald-500" />
                     </div>
                     <div className="text-left">
-                        <h4 className="font-bold text-slate-200">Scan Receipt</h4>
-                        <p className="text-xs text-slate-400">AI-powered extraction</p>
+                        <h4 className="font-bold text-slate-200">Add Transaction</h4>
+                        <p className="text-xs text-slate-400">Manual or Scan Receipt</p>
                     </div>
                 </button>
             </div>
