@@ -462,11 +462,7 @@ const Dashboard = ({ user }) => {
                 )}
             </div>
 
-            {/* Floating Action Button */}
-            <FloatingActionButton
-                onQuickAdd={() => setShowQuickAdd(true)}
-                onScan={() => navigate('/scan')}
-            />
+
 
             {/* Quick Add Modal */}
             <QuickAddModal

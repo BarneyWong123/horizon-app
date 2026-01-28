@@ -195,38 +195,24 @@ const QuickAddModal = ({ isOpen, onClose, user, accounts, selectedAccountId: def
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
             <div className="w-full max-w-md bg-slate-900 rounded-2xl border border-slate-800 shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
                 {/* Header */}
-                <div className="flex items-center justify-between p-4 border-b border-slate-800">
-                    <h3 className="text-lg font-bold text-white">Add Transaction</h3>
-                    <div className="flex gap-2">
-                        <button
-                            onClick={() => {
-                                window.location.href = '/scan'; // Force navigate or use navigate hook if available. 
-                                // Since we are in modal, useNavigate hook should work if parent passed it or we use it.
-                                // But component doesn't have useNavigate. Let's fix that or use window.location as fallback.
-                                // Actually, I'll update component to use useNavigate.
-                            }}
-                            className="flex items-center gap-1 px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 rounded-lg text-xs font-medium transition-colors"
-                        >
-                            <LucideIcons.ScanLine className="w-3.5 h-3.5" />
-                            Scan Receipt
-                        </button>
-                        <button onClick={onClose} className="text-slate-400 hover:text-white">
-                            <X className="w-5 h-5" />
-                        </button>
-                    </div>
+                <div className="flex items-center justify-between p-3 border-b border-slate-800">
+                    <h3 className="text-base font-bold text-white">Add Transaction</h3>
+                    <button onClick={onClose} className="text-slate-400 hover:text-white">
+                        <X className="w-5 h-5" />
+                    </button>
                 </div>
 
-                <div className="p-4 space-y-4">
+                <div className="p-3 space-y-3">
                     {/* Amount Display */}
-                    <div className="bg-slate-800 rounded-xl p-4">
-                        <div className="flex items-center justify-between mb-2">
-                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Amount</label>
+                    <div className="bg-slate-800 rounded-xl p-3">
+                        <div className="flex items-center justify-between mb-1">
+                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Amount</label>
                             {/* Currency Picker */}
                             <div className="relative">
                                 <button
                                     type="button"
                                     onClick={() => setShowCurrencyPicker(!showCurrencyPicker)}
-                                    className="flex items-center gap-1 px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded-lg text-xs transition-colors"
+                                    className="flex items-center gap-1 px-1.5 py-0.5 bg-slate-700 hover:bg-slate-600 rounded text-[10px] transition-colors"
                                 >
                                     <span>{selectedCurrencyInfo?.flag}</span>
                                     <span className="text-slate-300">{currency}</span>
@@ -253,13 +239,13 @@ const QuickAddModal = ({ isOpen, onClose, user, accounts, selectedAccountId: def
                                 )}
                             </div>
                         </div>
-                        <div className="text-3xl font-bold text-white tracking-wider overflow-x-auto whitespace-nowrap scrollbar-hide">
+                        <div className="text-2xl font-bold text-white tracking-wider overflow-x-auto whitespace-nowrap scrollbar-hide">
                             {amount || '0'}
                         </div>
                     </div>
 
                     {/* Calculator Keypad */}
-                    <div className="grid grid-cols-4 gap-2">
+                    <div className="grid grid-cols-4 gap-1.5">
                         {calcButtons.map((row, rowIdx) => (
                             <React.Fragment key={rowIdx}>
                                 {row.map((btn) => (
@@ -267,7 +253,7 @@ const QuickAddModal = ({ isOpen, onClose, user, accounts, selectedAccountId: def
                                         key={btn}
                                         type="button"
                                         onClick={() => handleCalcInput(btn)}
-                                        className={`py-3 rounded-xl font-bold text-lg transition-all active:scale-95 ${btn === 'DEL' ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30' :
+                                        className={`py-2 rounded-lg font-bold text-base transition-all active:scale-95 ${btn === 'DEL' ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30' :
                                             btn === 'C' ? 'bg-amber-500/20 text-amber-400 hover:bg-amber-500/30' :
                                                 btn === '=' ? 'bg-emerald-500 text-white hover:bg-emerald-600 row-span-2' : // Not actually row-span in this grid structure
                                                     ['/', '*', '-', '+'].includes(btn) ? 'bg-slate-700 text-emerald-400 hover:bg-slate-600' :
@@ -275,7 +261,7 @@ const QuickAddModal = ({ isOpen, onClose, user, accounts, selectedAccountId: def
                                                             'bg-slate-800 text-slate-200 hover:bg-slate-700'
                                             }`}
                                     >
-                                        {btn === 'DEL' ? <Delete className="w-5 h-5 mx-auto" /> : btn}
+                                        {btn === 'DEL' ? <Delete className="w-4 h-4 mx-auto" /> : btn}
                                     </button>
                                 ))}
                             </React.Fragment>
@@ -287,7 +273,7 @@ const QuickAddModal = ({ isOpen, onClose, user, accounts, selectedAccountId: def
                         <input
                             type="text"
                             placeholder="Add a note... (e.g. Lunch at cafe)"
-                            className="w-full bg-slate-800 border-none rounded-xl py-3 px-4 text-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none placeholder:text-slate-500"
+                            className="w-full bg-slate-800 border-none rounded-lg py-2.5 px-4 text-sm text-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none placeholder:text-slate-500"
                             value={note}
                             onChange={(e) => setNote(e.target.value)}
                         />
@@ -328,20 +314,22 @@ const QuickAddModal = ({ isOpen, onClose, user, accounts, selectedAccountId: def
                     )}
 
                     {/* Category Grid */}
-                    <div className="grid grid-cols-5 gap-2">
+                    <div className="grid grid-cols-5 gap-1.5">
                         {categories.slice(0, 10).map((cat) => {
                             const IconComponent = LucideIcons[cat.icon] || LucideIcons.CircleDot;
+                            const isActive = categoryId === cat.id;
                             return (
                                 <button
                                     key={cat.id}
                                     type="button"
                                     onClick={() => setCategoryId(cat.id)}
-                                    className={`flex flex-col items-center p-2 rounded-xl transition-all ${categoryId === cat.id
-                                        ? 'bg-emerald-500/20 ring-1 ring-emerald-500 text-emerald-400'
+                                    className={`flex flex-col items-center p-2 rounded-lg transition-all ${isActive
+                                        ? 'bg-slate-800 ring-1 ring-emerald-500' // Base active style
                                         : 'bg-slate-800 hover:bg-slate-700 text-slate-400'
                                         }`}
+                                    style={isActive ? { backgroundColor: `${cat.color}20`, color: cat.color } : {}}
                                 >
-                                    <IconComponent className="w-5 h-5 mb-1" />
+                                    <IconComponent className="w-4 h-4 mb-1" style={!isActive ? { color: cat.color } : {}} />
                                     <span className="text-[10px] truncate w-full text-center">{cat.name.split(' ')[0]}</span>
                                 </button>
                             );
@@ -352,7 +340,7 @@ const QuickAddModal = ({ isOpen, onClose, user, accounts, selectedAccountId: def
                     <button
                         onClick={handleSubmit}
                         disabled={loading}
-                        className="w-full bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white font-bold py-4 rounded-xl transition-colors flex items-center justify-center gap-2 mt-4"
+                        className="w-full bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2 mt-2"
                     >
                         {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Save Expense'}
                     </button>
