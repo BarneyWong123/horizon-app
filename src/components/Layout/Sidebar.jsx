@@ -53,7 +53,9 @@ const Sidebar = ({ user }) => {
                 <div>
                     {/* Logo */}
                     <div className="flex items-center gap-3 mb-8 px-2">
-                        <img src="/horizon_logo.png" alt="Horizon" className="w-16 h-16 rounded-full object-contain p-1 transition-transform hover:scale-110" style={{ backgroundColor: 'var(--bg-input)' }} />
+                        <div className="w-16 h-16 rounded-full overflow-hidden flex items-center justify-center transition-transform hover:scale-110" style={{ backgroundColor: 'white' }}>
+                            <img src="/horizon_logo.png" alt="Horizon" className="w-full h-full object-cover scale-[1.7]" />
+                        </div>
                         <span className="text-xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>Horizon</span>
                     </div>
 
@@ -165,7 +167,9 @@ const Sidebar = ({ user }) => {
                 style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-default)' }}
             >
                 <div className="flex items-center gap-2">
-                    <img src="/horizon_logo.png" alt="Horizon" className="w-10 h-10 rounded-full object-contain p-1" style={{ backgroundColor: 'var(--bg-input)' }} />
+                    <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center" style={{ backgroundColor: 'white' }}>
+                        <img src="/horizon_logo.png" alt="Horizon" className="w-full h-full object-cover scale-[1.7]" />
+                    </div>
                     <span className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>Horizon</span>
                 </div>
             </header>
