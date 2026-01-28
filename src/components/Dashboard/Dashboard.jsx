@@ -407,21 +407,7 @@ const Dashboard = ({ user }) => {
                 </div>
             </div>
 
-            {/* Quick Access Widgets */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <button
-                    onClick={() => setShowQuickAdd(true)}
-                    className="flex items-center gap-4 bg-slate-900/50 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500/50 p-4 rounded-xl transition-all group"
-                >
-                    <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                        <LucideIcons.Plus className="w-6 h-6 text-emerald-500" />
-                    </div>
-                    <div className="text-left">
-                        <h4 className="font-bold text-slate-200">Add Transaction</h4>
-                        <p className="text-xs text-slate-400">Manual or Scan Receipt</p>
-                    </div>
-                </button>
-            </div>
+
 
             {/* Analytics Section - New Visuals */}
             <AnalyticsSection transactions={filteredTransactions} />
