@@ -34,7 +34,7 @@ const FloatingActionButton = ({ onQuickAdd, onScan }) => {
                 {isOpen ? (
                     <X className="w-6 h-6 text-white" />
                 ) : (
-                    <img src="/logo.png" alt="Menu" className="w-full h-full object-cover" />
+                    <img src="/horizon_logo.png" alt="Menu" className="w-full h-full object-cover" />
                 )}
             </button>
         </div>
