@@ -29,13 +29,9 @@ const FloatingActionButton = ({ onQuickAdd, onScan }) => {
             {/* Main FAB */}
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className={`w-14 h-14 rounded-full flex items-center justify-center shadow-xl transition-all duration-300 overflow-hidden ${isOpen ? 'bg-slate-700 rotate-0' : 'bg-slate-900 border border-slate-700'}`}
+                className={`w-14 h-14 rounded-full flex items-center justify-center shadow-xl transition-all duration-300 ${isOpen ? 'bg-slate-600 rotate-45' : 'bg-emerald-500 hover:bg-emerald-600'}`}
             >
-                {isOpen ? (
-                    <X className="w-6 h-6 text-white" />
-                ) : (
-                    <img src="/horizon_logo.png" alt="Menu" className="w-full h-full object-cover" />
-                )}
+                <Plus className="w-7 h-7 text-white" />
             </button>
         </div>
     );

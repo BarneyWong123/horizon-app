@@ -16,7 +16,7 @@ const TransactionList = ({ transactions, onEdit }) => {
     }
 
     return (
-        <div className="divide-y divide-slate-800">
+        <div className="divide-y" style={{ borderColor: 'var(--border-default)' }}>
             {transactions.map((t) => {
                 const category = getCategoryById(t.category);
                 const IconComponent = LucideIcons[category.icon] || LucideIcons.CircleDot;
@@ -27,7 +27,10 @@ const TransactionList = ({ transactions, onEdit }) => {
                     <div
                         key={t.id}
                         onClick={() => onEdit && onEdit(t)}
-                        className="flex items-center gap-3 p-4 bg-[var(--bg-card)] border-[var(--border-subtle)]/30 transition-colors cursor-pointer"
+                        className="flex items-center gap-3 p-4 transition-colors cursor-pointer"
+                        style={{ backgroundColor: 'transparent' }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                     >
                         {/* Category Icon */}
                         <div
@@ -40,26 +43,26 @@ const TransactionList = ({ transactions, onEdit }) => {
                         {/* Details */}
                         <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
-                                <p className="font-medium text-slate-200 truncate">{t.merchant}</p>
+                                <p className="font-medium truncate" style={{ color: 'var(--text-primary)' }}>{t.merchant}</p>
                                 {hasItems && (
-                                    <span className="flex items-center gap-1 text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded-full">
+                                    <span className="flex items-center gap-1 text-[10px] bg-emerald-500/20 text-emerald-500 px-1.5 py-0.5 rounded-full">
                                         <Receipt className="w-2.5 h-2.5" />
                                         {t.items.length}
                                     </span>
                                 )}
                             </div>
-                            <p className="text-xs text-slate-500">
+                            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
                                 {category.name} • {new Date(t.date || t.createdAt?.toDate()).toLocaleDateString()}
                             </p>
                         </div>
 
                         {/* Amount with Currency */}
                         <div className="text-right">
-                            <p className="font-bold text-white">
+                            <p className="font-bold" style={{ color: 'var(--text-primary)' }}>
                                 {currencyInfo?.symbol || '$'}{(t.total || 0).toFixed(2)}
                             </p>
                             {t.currency && t.currency !== 'USD' && (
-                                <p className="text-[10px] text-slate-500">{t.currency}</p>
+                                <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{t.currency}</p>
                             )}
                         </div>
                     </div>

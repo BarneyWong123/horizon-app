@@ -116,13 +116,7 @@ const Dashboard = ({ user }) => {
             displayAverage = dailyRate * 30;
         }
 
-        // IMPORTANT: Convert all stats to the user's selected global currency for display
-        const displayTotalSpent = convert(totalSpent, 'USD', useCurrency().selectedCurrency);
-        const displayDailyRate = convert(dailyRate, 'USD', useCurrency().selectedCurrency);
-        const displayAvgFormatted = convert(displayAverage, 'USD', useCurrency().selectedCurrency);
-        const displayTotalBalance = convert(totalBalance, 'USD', useCurrency().selectedCurrency);
-
-        // Calculate days until zero (if user has balance)
+        // Calculate total balance FIRST (before using it)
         const totalBalance = accounts.reduce((acc, curr) => {
             // If an account is selected, only count that one. Otherwise count all.
             if (selectedAccountId && curr.id !== selectedAccountId) return acc;
@@ -141,14 +135,14 @@ const Dashboard = ({ user }) => {
         }, {});
 
         return {
-            totalSpent: displayTotalSpent,
-            dailyRate: displayDailyRate,
-            displayAverage: displayAvgFormatted,
-            totalBalance: displayTotalBalance,
+            totalSpent,
+            dailyRate,
+            displayAverage,
+            totalBalance,
             daysUntilZero,
             categoryTotals
         };
-    }, [filteredTransactions, accounts, convert, averageType, selectedAccountId, useCurrency().selectedCurrency]);
+    }, [filteredTransactions, accounts, convert, averageType, selectedAccountId]);
 
     const selectedCategoryData = selectedCategory ? categories.find(c => c.id === selectedCategory) : null;
     const CategoryIcon = selectedCategoryData ? (LucideIcons[selectedCategoryData.icon] || LucideIcons.CircleDot) : null;
@@ -166,14 +160,14 @@ const Dashboard = ({ user }) => {
         <div className="space-y-4 md:space-y-6 pb-24 px-4 md:px-0">
             {/* Header */}
             <div>
-                <h1 className="text-xl md:text-2xl font-bold text-white mb-1">Dashboard</h1>
-                <p className="text-slate-400 text-sm">Your financial overview</p>
+                <h1 className="text-xl md:text-2xl font-bold mb-1" style={{ color: 'var(--text-primary)' }}>Dashboard</h1>
+                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Your financial overview</p>
             </div>
 
             {/* Filters Row */}
             <div className="flex flex-wrap gap-2 items-center">
                 {/* Time Period Filter */}
-                <div className="flex bg-slate-800 rounded-lg p-1">
+                <div className="flex rounded-lg p-1" style={{ backgroundColor: 'var(--bg-input)' }}>
                     {[
                         { id: 'today', label: 'Today' },
                         { id: 'week', label: 'Week' },
@@ -186,8 +180,9 @@ const Dashboard = ({ user }) => {
                             onClick={() => { setTimePeriod(period.id); setShowDatePicker(false); }}
                             className={`px-2 md:px-3 py-1.5 text-xs font-medium rounded-md transition-all ${timePeriod === period.id
                                 ? 'bg-emerald-500 text-white'
-                                : 'text-slate-400 hover:text-white'
+                                : ''
                                 }`}
+                            style={timePeriod !== period.id ? { color: 'var(--text-muted)' } : {}}
                         >
                             {period.label}
                         </button>
@@ -348,40 +343,44 @@ const Dashboard = ({ user }) => {
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
                 <div
                     onClick={() => setTimePeriod(prev => prev === 'year' ? 'month' : 'year')}
-                    className="bg-[var(--bg-card)] border-[var(--border-subtle)] rounded-xl p-3 md:p-4 cursor-pointer hover:bg-slate-800 transition-colors"
+                    className="card rounded-xl p-3 md:p-4 cursor-pointer transition-colors"
+                    style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-default)' }}
                 >
                     <div className="flex items-center justify-between mb-2">
-                        <span className="text-slate-500 text-xs font-medium">Total Spent</span>
+                        <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Total Spent</span>
                         <Wallet className="text-emerald-500 w-4 h-4" />
                     </div>
-                    <p className="text-xl md:text-2xl font-bold text-white">{formatAmount(stats.totalSpent)}</p>
-                    <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
+                    <p className="text-xl md:text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>{formatAmount(stats.totalSpent)}</p>
+                    <p className="text-xs mt-1 flex items-center gap-1" style={{ color: 'var(--text-muted)' }}>
                         {timePeriod === 'month' ? 'This month' : timePeriod === 'year' ? 'This year' : 'All time'}
                         <LucideIcons.RefreshCw className="w-3 h-3 opacity-50" />
                         {selectedCategory && ` • ${selectedCategoryData?.name}`}
                     </p>
                 </div>
 
-                <div className="bg-[var(--bg-card)] border-[var(--border-subtle)] rounded-xl p-3 md:p-4">
+                <div
+                    className="card rounded-xl p-3 md:p-4"
+                    style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-default)' }}
+                >
                     <div className="flex items-center justify-between mb-2">
                         <button
                             onClick={() => setAverageType(prev => prev === 'daily' ? 'monthly' : 'daily')}
-                            className="text-slate-500 text-xs font-medium flex items-center gap-1 hover:text-white transition-colors"
+                            className="text-xs font-medium flex items-center gap-1 transition-colors"
+                            style={{ color: 'var(--text-muted)' }}
                         >
                             {averageType === 'daily' ? 'Daily Average' : 'Monthly Average'}
                             <LucideIcons.ArrowLeftRight className="w-3 h-3" />
                         </button>
                         <TrendingDown className="text-amber-500 w-4 h-4" />
                     </div>
-                    <p className="text-xl md:text-2xl font-bold text-white">{formatAmount(averageType === 'daily' ? stats.dailyRate : stats.displayAverage)}</p>
-                    <p className="text-xs text-slate-500 mt-1">
+                    <p className="text-xl md:text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>{formatAmount(averageType === 'daily' ? stats.dailyRate : stats.displayAverage)}</p>
+                    <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
                         {averageType === 'daily' ? 'Per day' : 'Per 30 days'}
                     </p>
                 </div>
 
                 <div
                     onClick={() => {
-                        // Cycle through accounts: null (All) -> acc1 -> acc2 -> ... -> null
                         const currentIdx = selectedAccountId ? accounts.findIndex(a => a.id === selectedAccountId) : -1;
                         const nextIdx = currentIdx + 1;
                         if (nextIdx < accounts.length) {
@@ -390,34 +389,38 @@ const Dashboard = ({ user }) => {
                             setSelectedAccountId(null);
                         }
                     }}
-                    className="bg-[var(--bg-card)] border-[var(--border-subtle)] rounded-xl p-3 md:p-4 cursor-pointer hover:bg-slate-800 transition-colors"
+                    className="card rounded-xl p-3 md:p-4 cursor-pointer transition-colors"
+                    style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-default)' }}
                 >
                     <div className="flex items-center justify-between mb-2">
-                        <span className="text-slate-500 text-xs font-medium">Balance</span>
+                        <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Balance</span>
                         <Wallet className="text-blue-500 w-4 h-4" />
                     </div>
-                    <p className="text-xl md:text-2xl font-bold text-white">{formatAmount(stats.totalBalance)}</p>
-                    <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
+                    <p className="text-xl md:text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>{formatAmount(stats.totalBalance)}</p>
+                    <p className="text-xs mt-1 flex items-center gap-1" style={{ color: 'var(--text-muted)' }}>
                         {selectedAccountId ? accounts.find(a => a.id === selectedAccountId)?.name : 'All accounts'}
                         <LucideIcons.RefreshCw className="w-3 h-3 opacity-50" />
                     </p>
                 </div>
 
-                <div className="bg-[var(--bg-card)] border-[var(--border-subtle)] rounded-xl p-3 md:p-4">
+                <div
+                    className="card rounded-xl p-3 md:p-4"
+                    style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-default)' }}
+                >
                     <div className="flex items-center justify-between mb-2 group relative">
-                        <span className="text-slate-500 text-xs font-medium flex items-center gap-1 cursor-help">
+                        <span className="text-xs font-medium flex items-center gap-1 cursor-help" style={{ color: 'var(--text-muted)' }}>
                             Days Left
                             <LucideIcons.Info className="w-3 h-3" />
                         </span>
-                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-slate-800 text-slate-200 text-xs rounded-lg border border-slate-700 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10" style={{ backgroundColor: 'var(--bg-card)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)' }}>
                             Estimated time until your total balance reaches zero at your current daily spending rate.
                         </div>
                         <Calendar className="text-purple-500 w-4 h-4" />
                     </div>
-                    <p className={`text-xl md:text-2xl font-bold ${stats.daysUntilZero > 30 ? 'text-emerald-400' : stats.daysUntilZero > 14 ? 'text-amber-400' : 'text-red-400'}`}>
+                    <p className={`text-xl md:text-2xl font-bold ${stats.daysUntilZero > 30 ? 'text-emerald-500' : stats.daysUntilZero > 14 ? 'text-amber-500' : 'text-red-500'}`}>
                         {stats.daysUntilZero === Infinity ? '∞' : stats.daysUntilZero}
                     </p>
-                    <p className="text-xs text-slate-500 mt-1">At current rate</p>
+                    <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>At current rate</p>
                 </div>
             </div>
 

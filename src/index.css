@@ -1,32 +1,60 @@
 @import "tailwindcss";
 
 @theme {
-  --color-slate-950: var(--bg-page);
-  --color-slate-900: var(--bg-card);
   --color-brand-emerald: #10b981;
   --color-brand-emerald-dark: #059669;
 }
 
+/* Light Mode (Default) */
 :root {
-  --bg-page: #ffffff;
-  --bg-card: #f8fafc;
-  --text-main: #0f172a;
-  --text-dim: #64748b;
-  --border-subtle: #e2e8f0;
+  --bg-page: #f8fafc;
+  --bg-card: #ffffff;
+  --bg-input: #f1f5f9;
+  --bg-hover: #e2e8f0;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --border-default: #e2e8f0;
+  --border-subtle: #f1f5f9;
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
+/* Dark Mode */
 .dark {
   --bg-page: #020617;
   --bg-card: #0f172a;
-  --text-main: #e2e8f0;
-  --text-dim: #94a3b8;
-  --border-subtle: #1e293b;
+  --bg-input: #1e293b;
+  --bg-hover: #334155;
+  --text-primary: #f1f5f9;
+  --text-secondary: #cbd5e1;
+  --text-muted: #64748b;
+  --border-default: #1e293b;
+  --border-subtle: #0f172a;
+  --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -1px rgba(0, 0, 0, 0.1);
 }
 
 @layer base {
   body {
-    @apply bg-[var(--bg-page)] text-[var(--text-main)] antialiased transition-colors duration-300;
+    background-color: var(--bg-page);
+    color: var(--text-primary);
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    transition: background-color 0.3s, color 0.3s;
+  }
+
+  /* Scrollbar styling */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--bg-input);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--text-muted);
+    border-radius: 3px;
   }
 }
 
@@ -36,6 +64,21 @@
   }
 
   .card {
-    @apply bg-[var(--bg-card)] border border-[var(--border-subtle)] rounded-xl p-6 backdrop-blur-sm shadow-sm;
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-default);
+    border-radius: 0.75rem;
+    box-shadow: var(--shadow-card);
+  }
+
+  .input-field {
+    background-color: var(--bg-input);
+    border: 1px solid var(--border-default);
+    color: var(--text-primary);
+  }
+
+  .input-field:focus {
+    border-color: #10b981;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
   }
 }
