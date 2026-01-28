@@ -43,11 +43,11 @@ const Sidebar = ({ user }) => {
     return (
         <>
             {/* Desktop Sidebar - Hidden on mobile */}
-            <aside className="hidden md:flex fixed left-0 top-0 h-screen w-64 bg-slate-950 border-r border-slate-800 px-4 py-6 flex-col justify-between z-40">
+            <aside className="hidden md:flex fixed left-0 top-0 h-screen w-64 bg-[var(--bg-page)] border-[var(--border-subtle)] px-4 py-6 flex-col justify-between z-40">
                 <div>
                     {/* Logo */}
                     <div className="flex items-center gap-3 mb-8 px-2">
-                        <img src="/horizon_logo.png" alt="Horizon" className="w-10 h-10 rounded-full object-contain bg-white/5 p-1" />
+                        <img src="/horizon_logo.png" alt="Horizon" className="w-20 h-20 rounded-full object-contain bg-white/5 p-1 transition-transform hover:scale-110" />
                         <span className="text-xl font-bold tracking-tight text-white">Horizon</span>
                     </div>
 
@@ -75,7 +75,7 @@ const Sidebar = ({ user }) => {
                 <div className="border-t border-slate-800 pt-4 space-y-3 relative" ref={menuRef}>
                     {/* User Menu Popup */}
                     {showUserMenu && (
-                        <div className="absolute bottom-full left-0 w-full mb-2 bg-slate-900 border border-slate-800 rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-bottom-2 p-1">
+                        <div className="absolute bottom-full left-0 w-full mb-2 bg-[var(--bg-card)] border-[var(--border-subtle)] rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-bottom-2 p-1">
                             <button
                                 onClick={() => { navigate('/settings'); setShowUserMenu(false); }}
                                 className="w-full flex items-center gap-3 px-3 py-2.5 text-slate-300 hover:bg-slate-800 rounded-lg transition-colors text-left"
@@ -144,7 +144,7 @@ const Sidebar = ({ user }) => {
             {/* Mobile Header */}
             <header className="md:hidden fixed top-0 left-0 right-0 bg-slate-950/95 backdrop-blur-sm border-b border-slate-800 px-4 py-3 z-40 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                    <img src="/horizon_logo.png" alt="Horizon" className="w-8 h-8 rounded-full object-contain bg-white/5 p-1" />
+                    <img src="/horizon_logo.png" alt="Horizon" className="w-12 h-12 rounded-full object-contain bg-white/5 p-1" />
                     <span className="text-lg font-bold text-white">Horizon</span>
                 </div>
             </header>

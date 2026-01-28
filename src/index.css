@@ -1,24 +1,41 @@
 @import "tailwindcss";
 
 @theme {
-  --color-slate-950: #020617;
+  --color-slate-950: var(--bg-page);
+  --color-slate-900: var(--bg-card);
   --color-brand-emerald: #10b981;
   --color-brand-emerald-dark: #059669;
 }
 
+:root {
+  --bg-page: #ffffff;
+  --bg-card: #f8fafc;
+  --text-main: #0f172a;
+  --text-dim: #64748b;
+  --border-subtle: #e2e8f0;
+}
+
+.dark {
+  --bg-page: #020617;
+  --bg-card: #0f172a;
+  --text-main: #e2e8f0;
+  --text-dim: #94a3b8;
+  --border-subtle: #1e293b;
+}
+
 @layer base {
   body {
-    @apply bg-slate-950 text-slate-200 antialiased;
+    @apply bg-[var(--bg-page)] text-[var(--text-main)] antialiased transition-colors duration-300;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
   }
 }
 
 @layer components {
   .btn-primary {
-    @apply bg-brand-emerald hover:bg-brand-emerald-dark text-black font-semibold py-2 px-4 rounded-lg transition-colors duration-200;
+    @apply bg-brand-emerald hover:bg-brand-emerald-dark text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200;
   }
 
   .card {
-    @apply bg-slate-900/50 border border-slate-800 rounded-xl p-6 backdrop-blur-sm;
+    @apply bg-[var(--bg-card)] border border-[var(--border-subtle)] rounded-xl p-6 backdrop-blur-sm shadow-sm;
   }
 }

@@ -27,7 +27,7 @@ const TransactionList = ({ transactions, onEdit }) => {
                     <div
                         key={t.id}
                         onClick={() => onEdit && onEdit(t)}
-                        className="flex items-center gap-3 p-4 hover:bg-slate-800/30 transition-colors cursor-pointer"
+                        className="flex items-center gap-3 p-4 bg-[var(--bg-card)] border-[var(--border-subtle)]/30 transition-colors cursor-pointer"
                     >
                         {/* Category Icon */}
                         <div

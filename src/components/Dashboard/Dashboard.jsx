@@ -113,12 +113,19 @@ const Dashboard = ({ user }) => {
 
         let displayAverage = dailyRate;
         if (averageType === 'monthly') {
-            // Rough approximation for now, or just simply Total Spent if in current month context
             displayAverage = dailyRate * 30;
         }
 
+        // IMPORTANT: Convert all stats to the user's selected global currency for display
+        const displayTotalSpent = convert(totalSpent, 'USD', useCurrency().selectedCurrency);
+        const displayDailyRate = convert(dailyRate, 'USD', useCurrency().selectedCurrency);
+        const displayAvgFormatted = convert(displayAverage, 'USD', useCurrency().selectedCurrency);
+        const displayTotalBalance = convert(totalBalance, 'USD', useCurrency().selectedCurrency);
+
         // Calculate days until zero (if user has balance)
         const totalBalance = accounts.reduce((acc, curr) => {
+            // If an account is selected, only count that one. Otherwise count all.
+            if (selectedAccountId && curr.id !== selectedAccountId) return acc;
             const balanceInUSD = convert(curr.balance || 0, curr.currency || 'USD', 'USD');
             return acc + balanceInUSD;
         }, 0);
@@ -133,8 +140,15 @@ const Dashboard = ({ user }) => {
             return acc;
         }, {});
 
-        return { totalSpent, dailyRate, displayAverage, totalBalance, daysUntilZero, categoryTotals };
-    }, [filteredTransactions, accounts, convert, averageType]);
+        return {
+            totalSpent: displayTotalSpent,
+            dailyRate: displayDailyRate,
+            displayAverage: displayAvgFormatted,
+            totalBalance: displayTotalBalance,
+            daysUntilZero,
+            categoryTotals
+        };
+    }, [filteredTransactions, accounts, convert, averageType, selectedAccountId, useCurrency().selectedCurrency]);
 
     const selectedCategoryData = selectedCategory ? categories.find(c => c.id === selectedCategory) : null;
     const CategoryIcon = selectedCategoryData ? (LucideIcons[selectedCategoryData.icon] || LucideIcons.CircleDot) : null;
@@ -334,7 +348,7 @@ const Dashboard = ({ user }) => {
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
                 <div
                     onClick={() => setTimePeriod(prev => prev === 'year' ? 'month' : 'year')}
-                    className="bg-slate-900/50 border border-slate-800 rounded-xl p-3 md:p-4 cursor-pointer hover:bg-slate-800 transition-colors"
+                    className="bg-[var(--bg-card)] border-[var(--border-subtle)] rounded-xl p-3 md:p-4 cursor-pointer hover:bg-slate-800 transition-colors"
                 >
                     <div className="flex items-center justify-between mb-2">
                         <span className="text-slate-500 text-xs font-medium">Total Spent</span>
@@ -348,7 +362,7 @@ const Dashboard = ({ user }) => {
                     </p>
                 </div>
 
-                <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-3 md:p-4">
+                <div className="bg-[var(--bg-card)] border-[var(--border-subtle)] rounded-xl p-3 md:p-4">
                     <div className="flex items-center justify-between mb-2">
                         <button
                             onClick={() => setAverageType(prev => prev === 'daily' ? 'monthly' : 'daily')}
@@ -376,7 +390,7 @@ const Dashboard = ({ user }) => {
                             setSelectedAccountId(null);
                         }
                     }}
-                    className="bg-slate-900/50 border border-slate-800 rounded-xl p-3 md:p-4 cursor-pointer hover:bg-slate-800 transition-colors"
+                    className="bg-[var(--bg-card)] border-[var(--border-subtle)] rounded-xl p-3 md:p-4 cursor-pointer hover:bg-slate-800 transition-colors"
                 >
                     <div className="flex items-center justify-between mb-2">
                         <span className="text-slate-500 text-xs font-medium">Balance</span>
@@ -389,7 +403,7 @@ const Dashboard = ({ user }) => {
                     </p>
                 </div>
 
-                <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-3 md:p-4">
+                <div className="bg-[var(--bg-card)] border-[var(--border-subtle)] rounded-xl p-3 md:p-4">
                     <div className="flex items-center justify-between mb-2 group relative">
                         <span className="text-slate-500 text-xs font-medium flex items-center gap-1 cursor-help">
                             Days Left
@@ -416,7 +430,7 @@ const Dashboard = ({ user }) => {
             <BudgetProgress transactions={transactions} />
 
             {/* Recent Transactions */}
-            <div className="bg-slate-900/50 border border-slate-800 rounded-xl overflow-hidden">
+            <div className="bg-[var(--bg-card)] border-[var(--border-subtle)] rounded-xl overflow-hidden">
                 <div className="flex items-center justify-between p-4 border-b border-slate-800">
                     <h3 className="text-slate-400 text-sm font-medium">
                         Recent Transactions
