@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import {
     PieChart, Pie, Cell, ResponsiveContainer,
-    BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid
+    AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid
 } from 'recharts';
 import { useCurrency } from '../../context/CurrencyContext';
 import { useCategory } from '../../context/CategoryContext';
@@ -64,10 +64,67 @@ const AnalyticsSection = ({ transactions }) => {
             .sort((a, b) => new Date(a.date) - new Date(b.date));
     }, [transactions, selectedCurrency, convert]);
 
+    // Graph Configuration
+    const CustomTooltip = ({ active, payload, label }) => {
+        if (active && payload && payload.length) {
+            return (
+                <div className="bg-slate-900 border border-slate-800 p-3 rounded-lg shadow-xl">
+                    <p className="text-slate-400 text-xs mb-1">{label}</p>
+                    <p className="text-emerald-400 font-bold font-mono">
+                        {formatAmount(payload[0].value)}
+                    </p>
+                </div>
+            );
+        }
+        return null;
+    };
+
     if (transactions.length === 0) return null;
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            {/* Daily Trend (Area Chart) */}
+            <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4">
+                <h3 className="text-slate-400 text-sm font-medium mb-4">Spending Trend (Last 7 Days)</h3>
+                <div className="h-[250px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={barData}>
+                            <defs>
+                                <linearGradient id="colorAmount" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                                </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
+                            <XAxis
+                                dataKey="label"
+                                stroke="#64748b"
+                                fontSize={10}
+                                tickLine={false}
+                                axisLine={false}
+                                minTickGap={20}
+                            />
+                            <YAxis
+                                stroke="#64748b"
+                                fontSize={10}
+                                tickLine={false}
+                                axisLine={false}
+                                tickFormatter={(value) => `${value}`}
+                            />
+                            <Tooltip content={<CustomTooltip />} />
+                            <Area
+                                type="monotone"
+                                dataKey="amount"
+                                stroke="#10b981"
+                                strokeWidth={2}
+                                fillOpacity={1}
+                                fill="url(#colorAmount)"
+                            />
+                        </AreaChart>
+                    </ResponsiveContainer>
+                </div>
+            </div>
+
             {/* Spending Breakdown */}
             <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4">
                 <h3 className="text-slate-400 text-sm font-medium mb-4">Expenses by Category</h3>
@@ -109,38 +166,6 @@ const AnalyticsSection = ({ transactions }) => {
                             <span className="font-medium text-slate-200">{formatAmount(d.value)}</span>
                         </div>
                     ))}
-                </div>
-            </div>
-
-            {/* Daily Trend */}
-            <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4">
-                <h3 className="text-slate-400 text-sm font-medium mb-4">Daily Spending Trend</h3>
-                <div className="h-[250px] w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={barData}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
-                            <XAxis
-                                dataKey="label"
-                                stroke="#64748b"
-                                fontSize={10}
-                                tickLine={false}
-                                axisLine={false}
-                            />
-                            <YAxis
-                                stroke="#64748b"
-                                fontSize={10}
-                                tickLine={false}
-                                axisLine={false}
-                                tickFormatter={(value) => `${value}`}
-                            />
-                            <Tooltip
-                                cursor={{ fill: '#334155', opacity: 0.2 }}
-                                formatter={(value) => formatAmount(value)}
-                                contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#f8fafc' }}
-                            />
-                            <Bar dataKey="amount" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={40} />
-                        </BarChart>
-                    </ResponsiveContainer>
                 </div>
             </div>
         </div>
