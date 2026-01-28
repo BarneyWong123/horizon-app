@@ -5,8 +5,9 @@ import { CURRENCIES, getCurrencyByCode } from '../../data/currencies';
 import { FirebaseService } from '../../services/FirebaseService';
 import { useToast } from '../../context/ToastContext';
 import { useCategory } from '../../context/CategoryContext';
+import { useCurrency } from '../../context/CurrencyContext';
 
-const TransactionEditModal = ({ isOpen, onClose, user, transaction }) => {
+const TransactionEditModal = ({ isOpen, onClose, user, transaction, accounts = [] }) => {
     const [amount, setAmount] = useState('');
     const [note, setNote] = useState('');
     const [categoryId, setCategoryId] = useState('other');
@@ -18,6 +19,8 @@ const TransactionEditModal = ({ isOpen, onClose, user, transaction }) => {
     const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
     const { showToast } = useToast();
     const { categories } = useCategory();
+    const { convert } = useCurrency();
+    const [accountId, setAccountId] = useState('');
 
     // Sync state with transaction prop when it changes
     useEffect(() => {
@@ -27,6 +30,7 @@ const TransactionEditModal = ({ isOpen, onClose, user, transaction }) => {
             setCategoryId(transaction.category || 'other');
             setDate(transaction.date?.split('T')[0] || new Date().toISOString().split('T')[0]);
             setCurrency(transaction.currency || 'USD');
+            setAccountId(transaction.accountId || '');
         }
     }, [transaction]);
 
@@ -41,12 +45,52 @@ const TransactionEditModal = ({ isOpen, onClose, user, transaction }) => {
 
         setLoading(true);
         try {
+            const newAmount = parseFloat(amount);
+
+            // Handle Balance Adjustments
+            const oldAccountId = transaction.accountId;
+            const oldAmount = transaction.total || 0;
+            const oldCurrency = transaction.currency || 'USD';
+
+            // 1. Revert Old Balance
+            if (oldAccountId) {
+                const oldAccount = accounts.find(a => a.id === oldAccountId);
+                if (oldAccount) {
+                    const revertAmount = convert(oldAmount, oldCurrency, oldAccount.currency || 'USD');
+                    await FirebaseService.updateAccount(user.uid, oldAccountId, {
+                        balance: (oldAccount.balance || 0) + revertAmount
+                    });
+                }
+            }
+
+            // 2. Apply New Balance
+            if (accountId) {
+                // We need the latest account data because it might have changed in the revert step above
+                // For simplicity here, we'll assume sequential updates work or fetch fresh if needed.
+                // Best to fetch or use updated state. Since accounts comes from parent subscription, it might not update fast enough.
+                const targetAccount = accounts.find(a => a.id === accountId);
+                if (targetAccount) {
+                    const deductAmount = convert(newAmount, currency, targetAccount.currency || 'USD');
+                    // Calculate current balance (if it was the same account, adjust based on the revert we just did)
+                    let currentBalance = targetAccount.balance || 0;
+                    if (accountId === oldAccountId) {
+                        const revertAmount = convert(oldAmount, oldCurrency, targetAccount.currency || 'USD');
+                        currentBalance += revertAmount;
+                    }
+
+                    await FirebaseService.updateAccount(user.uid, accountId, {
+                        balance: currentBalance - deductAmount
+                    });
+                }
+            }
+
             await FirebaseService.updateTransaction(user.uid, transaction.id, {
-                total: parseFloat(amount),
+                total: newAmount,
                 category: categoryId,
                 merchant: note || categories.find(c => c.id === categoryId)?.name || 'Expense',
                 date: date,
-                currency: currency
+                currency: currency,
+                accountId: accountId || null
             });
             showToast('Transaction updated!', 'success');
             onClose();
@@ -63,6 +107,17 @@ const TransactionEditModal = ({ isOpen, onClose, user, transaction }) => {
 
         setDeleting(true);
         try {
+            // Revert balance before deleting
+            if (transaction.accountId) {
+                const account = accounts.find(a => a.id === transaction.accountId);
+                if (account) {
+                    const revertAmount = convert(transaction.total || 0, transaction.currency || 'USD', account.currency || 'USD');
+                    await FirebaseService.updateAccount(user.uid, transaction.accountId, {
+                        balance: (account.balance || 0) + revertAmount
+                    });
+                }
+            }
+
             await FirebaseService.deleteTransaction(user.uid, transaction.id);
             showToast('Transaction deleted', 'success');
             onClose();
@@ -176,6 +231,40 @@ const TransactionEditModal = ({ isOpen, onClose, user, transaction }) => {
                             )}
                         </div>
                     )}
+
+                    {/* Account Selector */}
+                    <div>
+                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Account</label>
+                        <div className="grid grid-cols-2 gap-2 mt-2">
+                            {accounts.map((acc) => {
+                                const IconComp = LucideIcons[acc.icon] || LucideIcons.Wallet;
+                                return (
+                                    <button
+                                        key={acc.id}
+                                        type="button"
+                                        onClick={() => setAccountId(acc.id)}
+                                        className={`flex items-center gap-2 p-3 rounded-xl transition-all ${accountId === acc.id
+                                            ? 'bg-slate-700 ring-2 ring-emerald-500'
+                                            : 'bg-slate-800 hover:bg-slate-700'
+                                            }`}
+                                    >
+                                        <div
+                                            className="w-8 h-8 rounded-lg flex items-center justify-center"
+                                            style={{ backgroundColor: `${acc.color}20` }}
+                                        >
+                                            <IconComp className="w-4 h-4" style={{ color: acc.color }} />
+                                        </div>
+                                        <div className="text-left overflow-hidden">
+                                            <p className="text-xs font-bold text-slate-200 truncate">{acc.name}</p>
+                                            <p className="text-[10px] text-slate-500">
+                                                {getCurrencyByCode(acc.currency || 'USD')?.symbol}{acc.balance?.toFixed(2)}
+                                            </p>
+                                        </div>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
 
                     {/* Category Grid */}
                     <div>

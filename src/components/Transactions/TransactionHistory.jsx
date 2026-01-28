@@ -41,7 +41,7 @@ const TransactionHistory = ({ user }) => {
             t.merchant?.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesCategory = !filterCategory || t.category === filterCategory;
         return matchesSearch && matchesCategory;
-    });
+    }).sort((a, b) => new Date(b.date) - new Date(a.date));
 
     return (
         <div className="space-y-4 px-4 md:px-0">
@@ -115,6 +115,7 @@ const TransactionHistory = ({ user }) => {
                 onClose={() => setEditingTransaction(null)}
                 user={user}
                 transaction={editingTransaction}
+                accounts={accounts}
             />
         </div>
     );

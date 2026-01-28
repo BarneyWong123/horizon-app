@@ -471,6 +471,7 @@ const Dashboard = ({ user }) => {
                 onClose={() => setEditingTransaction(null)}
                 user={user}
                 transaction={editingTransaction}
+                accounts={accounts}
             />
 
             {/* Category Settings Modal */}
