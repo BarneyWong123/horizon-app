@@ -47,7 +47,7 @@ const Sidebar = ({ user }) => {
                 <div>
                     {/* Logo */}
                     <div className="flex items-center gap-3 mb-8 px-2">
-                        <img src="/horizon_logo.png" alt="Horizon" className="w-10 h-10 rounded-xl object-contain bg-white/5 p-1" />
+                        <img src="/horizon_logo.png" alt="Horizon" className="w-10 h-10 rounded-full object-contain bg-white/5 p-1" />
                         <span className="text-xl font-bold tracking-tight text-white">Horizon</span>
                     </div>
 
@@ -144,7 +144,7 @@ const Sidebar = ({ user }) => {
             {/* Mobile Header */}
             <header className="md:hidden fixed top-0 left-0 right-0 bg-slate-950/95 backdrop-blur-sm border-b border-slate-800 px-4 py-3 z-40 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                    <img src="/horizon_logo.png" alt="Horizon" className="w-8 h-8 rounded-lg object-contain bg-white/5 p-1" />
+                    <img src="/horizon_logo.png" alt="Horizon" className="w-8 h-8 rounded-full object-contain bg-white/5 p-1" />
                     <span className="text-lg font-bold text-white">Horizon</span>
                 </div>
             </header>
