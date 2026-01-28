@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import {
     User, Moon, Sun, Bell, Shield, Wallet, Trash2,
-    ChevronRight, LogOut, Settings2, LayoutDashboard, CreditCard, Lock
+    ChevronRight, LogOut, Settings2, LayoutDashboard, CreditCard, Lock, X
 } from 'lucide-react';
+
+import { CURRENCIES } from '../../data/currencies';
 
 import { FirebaseService } from '../../services/FirebaseService';
 import { useTheme } from '../../context/ThemeContext';
@@ -21,6 +23,7 @@ const SettingsPage = ({ user }) => {
     const [showCategoryModal, setShowCategoryModal] = useState(false);
     const [pinModalOpen, setPinModalOpen] = useState(false);
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+    const [currencyModalOpen, setCurrencyModalOpen] = useState(false);
 
     const handleLogout = async () => {
         try {
@@ -110,11 +113,7 @@ const SettingsPage = ({ user }) => {
                     icon={Wallet}
                     label="Primary Currency"
                     value={selectedCurrency}
-                    onClick={() => {
-                        const next = selectedCurrency === 'USD' ? 'EUR' : selectedCurrency === 'EUR' ? 'MYR' : 'USD';
-                        setCurrency(next);
-                        showToast(`Currency changed to ${next}`, 'success');
-                    }}
+                    onClick={() => setCurrencyModalOpen(true)}
                     color="text-blue-500"
                 />
                 <SettingItem
@@ -221,6 +220,54 @@ const SettingsPage = ({ user }) => {
                             >
                                 Delete
                             </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {currencyModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                    <div
+                        className="rounded-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[80vh]"
+                        style={{
+                            backgroundColor: 'var(--bg-card)',
+                            border: '1px solid var(--border-default)'
+                        }}
+                    >
+                        <div className="flex items-center justify-between p-4 border-b" style={{ borderColor: 'var(--border-default)' }}>
+                            <h3 className="font-bold" style={{ color: 'var(--text-primary)' }}>Select Primary Currency</h3>
+                            <button onClick={() => setCurrencyModalOpen(false)} style={{ color: 'var(--text-muted)' }}>
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <div className="overflow-y-auto p-2">
+                            {CURRENCIES.map(c => (
+                                <button
+                                    key={c.code}
+                                    onClick={() => {
+                                        setCurrency(c.code);
+                                        setCurrencyModalOpen(false);
+                                        showToast(`Primary currency set to ${c.code}`, 'success');
+                                    }}
+                                    className="w-full flex items-center justify-between p-3 rounded-xl transition-colors"
+                                    style={{
+                                        backgroundColor: selectedCurrency === c.code ? 'var(--bg-input)' : 'transparent'
+                                    }}
+                                    onMouseEnter={(e) => { if (selectedCurrency !== c.code) e.currentTarget.style.backgroundColor = 'var(--bg-hover)'; }}
+                                    onMouseLeave={(e) => { if (selectedCurrency !== c.code) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-xl">{c.flag}</span>
+                                        <div className="text-left">
+                                            <p className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>{c.code}</p>
+                                            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{c.name}</p>
+                                        </div>
+                                    </div>
+                                    <span className="font-mono text-xs px-2 py-1 rounded-md bg-emerald-500/10 text-emerald-500">
+                                        {c.symbol}
+                                    </span>
+                                </button>
+                            ))}
                         </div>
                     </div>
                 </div>
