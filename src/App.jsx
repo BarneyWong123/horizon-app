@@ -28,7 +28,7 @@ const App = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--bg-page)' }}>
         <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
@@ -40,7 +40,7 @@ const App = () => {
         <CurrencyProvider>
           <CategoryProvider user={user}>
             <Router>
-              <div className="min-h-screen bg-slate-950 text-slate-200">
+              <div className="min-h-screen" style={{ backgroundColor: 'var(--bg-page)', color: 'var(--text-primary)' }}>
                 {!user ? (
                   <Routes>
                     <Route path="/login" element={<Login />} />

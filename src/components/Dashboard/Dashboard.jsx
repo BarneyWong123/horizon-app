@@ -150,8 +150,8 @@ const Dashboard = ({ user }) => {
     if (loading) {
         return (
             <div className="animate-pulse space-y-6 p-4">
-                <div className="h-24 bg-slate-900 rounded-xl"></div>
-                <div className="h-48 bg-slate-900 rounded-xl"></div>
+                <div className="h-24 rounded-xl" style={{ backgroundColor: 'var(--bg-card)' }}></div>
+                <div className="h-48 rounded-xl" style={{ backgroundColor: 'var(--bg-card)' }}></div>
             </div>
         );
     }

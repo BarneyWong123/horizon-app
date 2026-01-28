@@ -27,8 +27,14 @@ const BudgetProgress = ({ transactions }) => {
     }, {});
 
     return (
-        <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4 mt-6">
-            <h3 className="text-slate-400 text-sm font-medium mb-4">Monthly Budgets</h3>
+        <div
+            className="rounded-xl p-4 mt-6"
+            style={{
+                backgroundColor: 'var(--bg-card)',
+                border: '1px solid var(--border-default)'
+            }}
+        >
+            <h3 className="text-sm font-medium mb-4" style={{ color: 'var(--text-muted)' }}>Monthly Budgets</h3>
             <div className="space-y-4">
                 {budgetedCategories.map(cat => {
                     const spent = spendingByCategory[cat.id] || 0;
@@ -42,16 +48,16 @@ const BudgetProgress = ({ transactions }) => {
                     return (
                         <div key={cat.id}>
                             <div className="flex justify-between text-xs mb-1">
-                                <span className="text-slate-200 font-medium">{cat.name}</span>
-                                <span className="text-slate-400">
-                                    <span className={percent > 100 ? 'text-red-400 font-bold' : 'text-slate-200'}>
+                                <span className="font-medium" style={{ color: 'var(--text-primary)' }}>{cat.name}</span>
+                                <span style={{ color: 'var(--text-muted)' }}>
+                                    <span className={percent > 100 ? 'text-red-500 font-bold' : ''} style={percent <= 100 ? { color: 'var(--text-primary)' } : {}}>
                                         {formatAmount(spent)}
                                     </span>
                                     {' / '}
                                     {formatAmount(limit)}
                                 </span>
                             </div>
-                            <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+                            <div className="w-full rounded-full h-2 overflow-hidden" style={{ backgroundColor: 'var(--bg-input)' }}>
                                 <div
                                     className={`h-full rounded-full transition-all duration-500 ${progressColor}`}
                                     style={{ width: `${percent}%` }}

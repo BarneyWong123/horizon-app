@@ -12,10 +12,13 @@ const AccountCard = ({ account, isSelected, onClick, compact = false }) => {
             <button
                 onClick={onClick}
                 className={`flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-full text-sm font-medium transition-all ${isSelected
-                        ? 'text-white'
-                        : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                    ? 'text-white'
+                    : ''
                     }`}
-                style={isSelected ? { backgroundColor: color } : {}}
+                style={isSelected
+                    ? { backgroundColor: color }
+                    : { backgroundColor: 'var(--bg-input)', color: 'var(--text-muted)' }
+                }
             >
                 <IconComponent className="w-4 h-4" />
                 <span>{account.name}</span>
@@ -26,8 +29,11 @@ const AccountCard = ({ account, isSelected, onClick, compact = false }) => {
     return (
         <div
             onClick={onClick}
-            className={`bg-slate-900/50 border rounded-xl p-4 cursor-pointer transition-all hover:bg-slate-800/50 ${isSelected ? 'border-emerald-500' : 'border-slate-800'
-                }`}
+            className={`rounded-xl p-4 cursor-pointer transition-all`}
+            style={{
+                backgroundColor: 'var(--bg-card)',
+                border: isSelected ? '1px solid #10b981' : '1px solid var(--border-default)'
+            }}
         >
             <div className="flex items-center gap-3 mb-3">
                 <div
@@ -37,11 +43,11 @@ const AccountCard = ({ account, isSelected, onClick, compact = false }) => {
                     <IconComponent className="w-5 h-5" style={{ color }} />
                 </div>
                 <div>
-                    <p className="font-medium text-white">{account.name}</p>
-                    <p className="text-xs text-slate-500">{accountType.name}</p>
+                    <p className="font-medium" style={{ color: 'var(--text-primary)' }}>{account.name}</p>
+                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{accountType.name}</p>
                 </div>
             </div>
-            <p className="text-2xl font-bold text-white">
+            <p className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
                 ${(account.balance || 0).toLocaleString()}
             </p>
         </div>

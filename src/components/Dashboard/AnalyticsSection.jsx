@@ -68,9 +68,15 @@ const AnalyticsSection = ({ transactions }) => {
     const CustomTooltip = ({ active, payload, label }) => {
         if (active && payload && payload.length) {
             return (
-                <div className="bg-slate-900 border border-slate-800 p-3 rounded-lg shadow-xl">
-                    <p className="text-slate-400 text-xs mb-1">{label}</p>
-                    <p className="text-emerald-400 font-bold font-mono">
+                <div
+                    className="p-3 rounded-lg shadow-xl"
+                    style={{
+                        backgroundColor: 'var(--bg-card)',
+                        border: '1px solid var(--border-default)'
+                    }}
+                >
+                    <p className="text-xs mb-1" style={{ color: 'var(--text-muted)' }}>{label}</p>
+                    <p className="text-emerald-500 font-bold font-mono">
                         {formatAmount(payload[0].value)}
                     </p>
                 </div>
@@ -84,8 +90,14 @@ const AnalyticsSection = ({ transactions }) => {
     return (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
             {/* Daily Trend (Area Chart) */}
-            <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4">
-                <h3 className="text-slate-400 text-sm font-medium mb-4">Spending Trend (Last 7 Days)</h3>
+            <div
+                className="rounded-xl p-4"
+                style={{
+                    backgroundColor: 'var(--bg-card)',
+                    border: '1px solid var(--border-default)'
+                }}
+            >
+                <h3 className="text-sm font-medium mb-4" style={{ color: 'var(--text-muted)' }}>Spending Trend (Last 7 Days)</h3>
                 <div className="h-[250px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
                         <AreaChart data={barData}>
@@ -95,17 +107,17 @@ const AnalyticsSection = ({ transactions }) => {
                                     <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                                 </linearGradient>
                             </defs>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
+                            <CartesianGrid strokeDasharray="3 3" stroke="var(--border-default)" vertical={false} />
                             <XAxis
                                 dataKey="label"
-                                stroke="#64748b"
+                                stroke="var(--text-muted)"
                                 fontSize={10}
                                 tickLine={false}
                                 axisLine={false}
                                 minTickGap={20}
                             />
                             <YAxis
-                                stroke="#64748b"
+                                stroke="var(--text-muted)"
                                 fontSize={10}
                                 tickLine={false}
                                 axisLine={false}
@@ -126,8 +138,14 @@ const AnalyticsSection = ({ transactions }) => {
             </div>
 
             {/* Spending Breakdown */}
-            <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4">
-                <h3 className="text-slate-400 text-sm font-medium mb-4">Expenses by Category</h3>
+            <div
+                className="rounded-xl p-4"
+                style={{
+                    backgroundColor: 'var(--bg-card)',
+                    border: '1px solid var(--border-default)'
+                }}
+            >
+                <h3 className="text-sm font-medium mb-4" style={{ color: 'var(--text-muted)' }}>Expenses by Category</h3>
                 <div className="h-[250px] w-full flex items-center justify-center">
                     {pieData.length > 0 ? (
                         <ResponsiveContainer width="100%" height="100%">
@@ -161,9 +179,9 @@ const AnalyticsSection = ({ transactions }) => {
                         <div key={d.id} className="flex items-center justify-between text-xs">
                             <div className="flex items-center gap-1.5">
                                 <div className="w-2 h-2 rounded-full" style={{ backgroundColor: d.color }} />
-                                <span className="text-slate-300 truncate max-w-[100px]">{d.name}</span>
+                                <span className="truncate max-w-[100px]" style={{ color: 'var(--text-secondary)' }}>{d.name}</span>
                             </div>
-                            <span className="font-medium text-slate-200">{formatAmount(d.value)}</span>
+                            <span className="font-medium" style={{ color: 'var(--text-primary)' }}>{formatAmount(d.value)}</span>
                         </div>
                     ))}
                 </div>

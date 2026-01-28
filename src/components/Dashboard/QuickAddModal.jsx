@@ -193,33 +193,46 @@ const QuickAddModal = ({ isOpen, onClose, user, accounts, selectedAccountId: def
 
     return (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-            <div className="w-full max-w-md bg-slate-900 rounded-2xl border border-slate-800 shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
+            <div
+                className="w-full max-w-md rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto"
+                style={{
+                    backgroundColor: 'var(--bg-card)',
+                    border: '1px solid var(--border-default)'
+                }}
+            >
                 {/* Header */}
-                <div className="flex items-center justify-between p-3 border-b border-slate-800">
-                    <h3 className="text-base font-bold text-white">Add Transaction</h3>
-                    <button onClick={onClose} className="text-slate-400 hover:text-white">
+                <div className="flex items-center justify-between p-3" style={{ borderBottom: '1px solid var(--border-default)' }}>
+                    <h3 className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>Add Transaction</h3>
+                    <button onClick={onClose} style={{ color: 'var(--text-muted)' }}>
                         <X className="w-5 h-5" />
                     </button>
                 </div>
 
                 <div className="p-3 space-y-3">
                     {/* Amount Display */}
-                    <div className="bg-slate-800 rounded-xl p-3">
+                    <div className="rounded-xl p-3" style={{ backgroundColor: 'var(--bg-input)' }}>
                         <div className="flex items-center justify-between mb-1">
-                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Amount</label>
+                            <label className="text-[10px] font-bold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Amount</label>
                             {/* Currency Picker */}
                             <div className="relative">
                                 <button
                                     type="button"
                                     onClick={() => setShowCurrencyPicker(!showCurrencyPicker)}
-                                    className="flex items-center gap-1 px-1.5 py-0.5 bg-slate-700 hover:bg-slate-600 rounded text-[10px] transition-colors"
+                                    className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] transition-colors"
+                                    style={{ backgroundColor: 'var(--bg-hover)' }}
                                 >
                                     <span>{selectedCurrencyInfo?.flag}</span>
-                                    <span className="text-slate-300">{currency}</span>
-                                    <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform ${showCurrencyPicker ? 'rotate-180' : ''}`} />
+                                    <span style={{ color: 'var(--text-secondary)' }}>{currency}</span>
+                                    <ChevronDown className={`w-3 h-3 transition-transform ${showCurrencyPicker ? 'rotate-180' : ''}`} style={{ color: 'var(--text-muted)' }} />
                                 </button>
                                 {showCurrencyPicker && (
-                                    <div className="absolute top-full mt-1 right-0 w-44 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl z-20 max-h-48 overflow-y-auto">
+                                    <div
+                                        className="absolute top-full mt-1 right-0 w-44 rounded-xl shadow-2xl z-20 max-h-48 overflow-y-auto"
+                                        style={{
+                                            backgroundColor: 'var(--bg-card)',
+                                            border: '1px solid var(--border-default)'
+                                        }}
+                                    >
                                         {CURRENCIES.map(c => (
                                             <button
                                                 key={c.code}
@@ -228,18 +241,23 @@ const QuickAddModal = ({ isOpen, onClose, user, accounts, selectedAccountId: def
                                                     setCurrency(c.code);
                                                     setShowCurrencyPicker(false);
                                                 }}
-                                                className={`w-full px-3 py-2 text-left hover:bg-slate-700 flex items-center gap-2 text-sm ${currency === c.code ? 'bg-slate-700' : ''}`}
+                                                className="w-full px-3 py-2 text-left flex items-center gap-2 text-sm"
+                                                style={{
+                                                    backgroundColor: currency === c.code ? 'var(--bg-hover)' : 'transparent'
+                                                }}
+                                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
+                                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = currency === c.code ? 'var(--bg-hover)' : 'transparent'}
                                             >
                                                 <span>{c.flag}</span>
-                                                <span className="text-slate-200">{c.code}</span>
-                                                <span className="text-xs text-slate-500">{c.symbol}</span>
+                                                <span style={{ color: 'var(--text-primary)' }}>{c.code}</span>
+                                                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{c.symbol}</span>
                                             </button>
                                         ))}
                                     </div>
                                 )}
                             </div>
                         </div>
-                        <div className="text-2xl font-bold text-white tracking-wider overflow-x-auto whitespace-nowrap scrollbar-hide">
+                        <div className="text-2xl font-bold tracking-wider overflow-x-auto whitespace-nowrap scrollbar-hide" style={{ color: 'var(--text-primary)' }}>
                             {amount || '0'}
                         </div>
                     </div>
