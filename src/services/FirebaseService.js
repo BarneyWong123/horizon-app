@@ -16,9 +16,11 @@ import {
     orderBy,
     onSnapshot,
     serverTimestamp,
-    where,
     getDocs,
-    setDoc
+    setDoc,
+    runTransaction,
+    writeBatch,
+    limit
 } from "firebase/firestore";
 import {
     ref,
@@ -52,31 +54,96 @@ export const FirebaseService = {
     },
 
     // Transaction Operations
-    async addTransaction(uid, transactionData) {
-        const transactionsRef = collection(db, "users", uid, "transactions");
-        return addDoc(transactionsRef, {
-            ...transactionData,
-            createdAt: serverTimestamp(),
-            date: transactionData.date || new Date().toISOString()
+    async addTransaction(uid, transactionData, accountUpdates = []) {
+        return runTransaction(db, async (transaction) => {
+            const newTransactionRef = doc(collection(db, "users", uid, "transactions"));
+
+            // Process account updates atomically
+            for (const update of accountUpdates) {
+                if (!update.accountId) continue;
+                const accountRef = doc(db, "users", uid, "accounts", update.accountId);
+                const accountDoc = await transaction.get(accountRef);
+
+                if (accountDoc.exists()) {
+                    const currentBalance = accountDoc.data().balance || 0;
+                    transaction.update(accountRef, {
+                        balance: currentBalance + (update.changeAmount || 0)
+                    });
+                }
+            }
+
+            transaction.set(newTransactionRef, {
+                ...transactionData,
+                createdAt: serverTimestamp(),
+                date: transactionData.date || new Date().toISOString()
+            });
+
+            return newTransactionRef;
         });
     },
 
-    async updateTransaction(uid, transactionId, data) {
-        const transactionRef = doc(db, "users", uid, "transactions", transactionId);
-        return updateDoc(transactionRef, {
-            ...data,
-            updatedAt: serverTimestamp()
+    async updateTransaction(uid, transactionId, data, accountUpdates = []) {
+        return runTransaction(db, async (transaction) => {
+            const transactionRef = doc(db, "users", uid, "transactions", transactionId);
+
+            // Process account updates atomically
+            for (const update of accountUpdates) {
+                if (!update.accountId) continue;
+                const accountRef = doc(db, "users", uid, "accounts", update.accountId);
+                const accountDoc = await transaction.get(accountRef);
+
+                if (accountDoc.exists()) {
+                    const currentBalance = accountDoc.data().balance || 0;
+                    transaction.update(accountRef, {
+                        balance: currentBalance + (update.changeAmount || 0)
+                    });
+                }
+            }
+
+            transaction.update(transactionRef, {
+                ...data,
+                updatedAt: serverTimestamp()
+            });
         });
     },
 
-    async deleteTransaction(uid, transactionId) {
-        const transactionRef = doc(db, "users", uid, "transactions", transactionId);
-        return deleteDoc(transactionRef);
+    async deleteTransaction(uid, transactionId, accountUpdates = []) {
+        return runTransaction(db, async (transaction) => {
+            const transactionRef = doc(db, "users", uid, "transactions", transactionId);
+
+            // Process account updates atomically (usually reverting balances)
+            for (const update of accountUpdates) {
+                if (!update.accountId) continue;
+                const accountRef = doc(db, "users", uid, "accounts", update.accountId);
+                const accountDoc = await transaction.get(accountRef);
+
+                if (accountDoc.exists()) {
+                    const currentBalance = accountDoc.data().balance || 0;
+                    transaction.update(accountRef, {
+                        balance: currentBalance + (update.changeAmount || 0)
+                    });
+                }
+            }
+
+            transaction.delete(transactionRef);
+        });
     },
 
-    subscribeToTransactions(uid, callback, accountId = null) {
+    subscribeToTransactions(uid, callback, optionsOrAccountId = null) {
         const transactionsRef = collection(db, "users", uid, "transactions");
-        let q = query(transactionsRef, orderBy("createdAt", "desc"));
+        const constraints = [orderBy("createdAt", "desc")];
+        let accountId = null;
+
+        if (typeof optionsOrAccountId === 'string') {
+            accountId = optionsOrAccountId;
+        } else if (typeof optionsOrAccountId === 'object' && optionsOrAccountId !== null) {
+            accountId = optionsOrAccountId.accountId;
+            if (optionsOrAccountId.limit) {
+                constraints.push(limit(optionsOrAccountId.limit));
+            }
+        }
+
+        const q = query(transactionsRef, ...constraints);
 
         // Note: Firestore requires composite index for filtering + ordering
         // For now, we filter client-side if accountId is provided
@@ -129,7 +196,8 @@ export const FirebaseService = {
 
     async initializeDefaultAccount(uid) {
         const accountsRef = collection(db, "users", uid, "accounts");
-        const snapshot = await getDocs(accountsRef);
+        const q = query(accountsRef, limit(1));
+        const snapshot = await getDocs(q);
 
         if (snapshot.empty) {
             return addDoc(accountsRef, {
@@ -220,12 +288,22 @@ export const FirebaseService = {
     },
 
     async deleteUserData(uid) {
-        // Helper to delete all docs in a collection
+        // Helper to delete all docs in a collection using batches
         const deleteCollection = async (collName) => {
             const ref = collection(db, "users", uid, collName);
             const snapshot = await getDocs(ref);
-            const promises = snapshot.docs.map(doc => deleteDoc(doc.ref));
-            await Promise.all(promises);
+
+            // Chunk into batches of 500 (Firestore limit)
+            const chunks = [];
+            for (let i = 0; i < snapshot.docs.length; i += 500) {
+                chunks.push(snapshot.docs.slice(i, i + 500));
+            }
+
+            for (const chunk of chunks) {
+                const batch = writeBatch(db);
+                chunk.forEach(doc => batch.delete(doc.ref));
+                await batch.commit();
+            }
         };
 
         await Promise.all([

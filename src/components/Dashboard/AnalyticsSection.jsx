@@ -36,7 +36,7 @@ const AnalyticsSection = ({ transactions }) => {
             })
             .sort((a, b) => b.value - a.value) // Sort highest first
             .filter(d => d.value > 0);
-    }, [transactions, selectedCurrency, categories, getCategoryById, convert]);
+    }, [transactions, selectedCurrency, getCategoryById, convert]);
 
     // 2. Prepare Bar Chart Data (Daily Trend - Last 7 Days / Selected Range)
     const barData = useMemo(() => {
@@ -63,27 +63,6 @@ const AnalyticsSection = ({ transactions }) => {
             }))
             .sort((a, b) => new Date(a.date) - new Date(b.date));
     }, [transactions, selectedCurrency, convert]);
-
-    // Graph Configuration
-    const CustomTooltip = ({ active, payload, label }) => {
-        if (active && payload && payload.length) {
-            return (
-                <div
-                    className="p-3 rounded-lg shadow-xl"
-                    style={{
-                        backgroundColor: 'var(--bg-card)',
-                        border: '1px solid var(--border-default)'
-                    }}
-                >
-                    <p className="text-xs mb-1" style={{ color: 'var(--text-muted)' }}>{label}</p>
-                    <p className="text-emerald-500 font-bold font-mono">
-                        {formatAmount(payload[0].value)}
-                    </p>
-                </div>
-            );
-        }
-        return null;
-    };
 
     if (transactions.length === 0) return null;
 
@@ -123,7 +102,7 @@ const AnalyticsSection = ({ transactions }) => {
                                 axisLine={false}
                                 tickFormatter={(value) => `${value}`}
                             />
-                            <Tooltip content={<CustomTooltip />} />
+                            <Tooltip content={<CustomTooltip formatAmount={formatAmount} />} />
                             <Area
                                 type="monotone"
                                 dataKey="amount"
@@ -188,6 +167,26 @@ const AnalyticsSection = ({ transactions }) => {
             </div>
         </div>
     );
+};
+
+const CustomTooltip = ({ active, payload, label, formatAmount }) => {
+    if (active && payload && payload.length) {
+        return (
+            <div
+                className="p-3 rounded-lg shadow-xl"
+                style={{
+                    backgroundColor: 'var(--bg-card)',
+                    border: '1px solid var(--border-default)'
+                }}
+            >
+                <p className="text-xs mb-1" style={{ color: 'var(--text-muted)' }}>{label}</p>
+                <p className="text-emerald-500 font-bold font-mono">
+                    {formatAmount(payload[0].value)}
+                </p>
+            </div>
+        );
+    }
+    return null;
 };
 
 export default AnalyticsSection;

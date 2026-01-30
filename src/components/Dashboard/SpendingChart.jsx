@@ -12,15 +12,13 @@ const SpendingChart = ({ transactions }) => {
             spendingMap[day] = (spendingMap[day] || 0) + (t.total || 0);
         });
 
+        const result = [];
         let cumulative = 0;
-        return Array.from({ length: daysInMonth }, (_, i) => {
-            const day = i + 1;
-            cumulative += (spendingMap[day] || 0);
-            return {
-                day,
-                amount: cumulative
-            };
-        });
+        for (let i = 1; i <= daysInMonth; i++) {
+            cumulative += (spendingMap[i] || 0);
+            result.push({ day: i, amount: cumulative });
+        }
+        return result;
     }, [transactions]);
 
     const today = new Date().getDate();

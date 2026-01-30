@@ -15,6 +15,7 @@ export const BrandingProvider = ({ children, user }) => {
 
     useEffect(() => {
         if (!user) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setBranding({
                 logoUrl: null,
                 zoom: 1,
