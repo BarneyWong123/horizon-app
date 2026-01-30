@@ -50,17 +50,28 @@ const TransactionEditModal = ({ isOpen, onClose, user, transaction, accounts = [
                 return;
             }
 
+            // Calculate account updates
+            const accountUpdatesMap = {};
+            const addToMap = (accId, val) => {
+                accountUpdatesMap[accId] = (accountUpdatesMap[accId] || 0) + val;
+            };
+
+            const type = transaction.type || 'expense';
+
             if (transaction.isNewScan) {
-                // Apply New Balance
+                // New Scan (treat as expense)
                 if (accountId) {
                     const targetAccount = accounts.find(a => a.id === accountId);
                     if (targetAccount) {
                         const deductAmount = convert(newAmount, currency, targetAccount.currency || 'USD');
-                        await FirebaseService.updateAccount(user.uid, accountId, {
-                            balance: (targetAccount.balance || 0) - deductAmount
-                        });
+                        addToMap(accountId, -deductAmount);
                     }
                 }
+
+                const accountUpdates = Object.entries(accountUpdatesMap).map(([id, val]) => ({
+                    accountId: id,
+                    changeAmount: val
+                }));
 
                 await FirebaseService.addTransaction(user.uid, {
                     total: newAmount,
@@ -70,42 +81,38 @@ const TransactionEditModal = ({ isOpen, onClose, user, transaction, accounts = [
                     currency: currency,
                     accountId: accountId || null,
                     inputType: 'image',
-                    items: transaction.items || []
-                });
+                    items: transaction.items || [],
+                    type: 'expense'
+                }, accountUpdates);
                 showToast('Transaction saved!', 'success');
             } else {
-                // Handle Balance Adjustments
-                const oldAccountId = transaction.accountId;
-                const oldAmount = transaction.total || 0;
-                const oldCurrency = transaction.currency || 'USD';
-
-                // 1. Revert Old Balance
-                if (oldAccountId) {
-                    const oldAccount = accounts.find(a => a.id === oldAccountId);
+                // Update Existing
+                // 1. Revert Old
+                if (transaction.accountId) {
+                    const oldAccount = accounts.find(a => a.id === transaction.accountId);
                     if (oldAccount) {
-                        const revertAmount = convert(oldAmount, oldCurrency, oldAccount.currency || 'USD');
-                        await FirebaseService.updateAccount(user.uid, oldAccountId, {
-                            balance: (oldAccount.balance || 0) + revertAmount
-                        });
+                        const oldAmountInAcc = convert(transaction.total || 0, transaction.currency || 'USD', oldAccount.currency || 'USD');
+                        // If expense, we add back. If income, we subtract.
+                        if (type === 'expense') addToMap(transaction.accountId, oldAmountInAcc);
+                        else addToMap(transaction.accountId, -oldAmountInAcc);
                     }
                 }
 
-                // 2. Apply New Balance
+                // 2. Apply New
                 if (accountId) {
-                    const targetAccount = accounts.find(a => a.id === accountId);
-                    if (targetAccount) {
-                        const deductAmount = convert(newAmount, currency, targetAccount.currency || 'USD');
-                        let currentBalance = targetAccount.balance || 0;
-                        if (accountId === oldAccountId) {
-                            const revertAmount = convert(oldAmount, oldCurrency, targetAccount.currency || 'USD');
-                            currentBalance += revertAmount;
-                        }
-
-                        await FirebaseService.updateAccount(user.uid, accountId, {
-                            balance: currentBalance - deductAmount
-                        });
+                    const newAccount = accounts.find(a => a.id === accountId);
+                    if (newAccount) {
+                        const newAmountInAcc = convert(newAmount, currency, newAccount.currency || 'USD');
+                        // If expense, we subtract. If income, we add.
+                        if (type === 'expense') addToMap(accountId, -newAmountInAcc);
+                        else addToMap(accountId, newAmountInAcc);
                     }
                 }
+
+                const accountUpdates = Object.entries(accountUpdatesMap).map(([id, val]) => ({
+                    accountId: id,
+                    changeAmount: val
+                })).filter(u => Math.abs(u.changeAmount) > 0.001); // Filter out zero changes
 
                 await FirebaseService.updateTransaction(user.uid, transaction.id, {
                     total: newAmount,
@@ -114,7 +121,7 @@ const TransactionEditModal = ({ isOpen, onClose, user, transaction, accounts = [
                     date: date,
                     currency: currency,
                     accountId: accountId || null
-                });
+                }, accountUpdates);
                 showToast('Transaction updated!', 'success');
             }
             onClose();
@@ -131,18 +138,21 @@ const TransactionEditModal = ({ isOpen, onClose, user, transaction, accounts = [
 
         setDeleting(true);
         try {
-            // Revert balance before deleting
+            const accountUpdates = [];
             if (transaction.accountId) {
                 const account = accounts.find(a => a.id === transaction.accountId);
                 if (account) {
                     const revertAmount = convert(transaction.total || 0, transaction.currency || 'USD', account.currency || 'USD');
-                    await FirebaseService.updateAccount(user.uid, transaction.accountId, {
-                        balance: (account.balance || 0) + revertAmount
+                    const type = transaction.type || 'expense';
+                    // If expense, add back. If income, subtract.
+                    accountUpdates.push({
+                        accountId: transaction.accountId,
+                        changeAmount: type === 'expense' ? revertAmount : -revertAmount
                     });
                 }
             }
 
-            await FirebaseService.deleteTransaction(user.uid, transaction.id);
+            await FirebaseService.deleteTransaction(user.uid, transaction.id, accountUpdates);
             showToast('Transaction deleted', 'success');
             onClose();
         } catch (err) {

@@ -18,6 +18,7 @@ export const CategoryProvider = ({ children, user }) => {
 
     useEffect(() => {
         if (!user) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setCategories([]);
             setLoading(false);
             return;

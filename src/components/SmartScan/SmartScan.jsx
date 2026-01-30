@@ -5,7 +5,6 @@ import { OpenAIService } from '../../services/OpenAIService';
 import { FirebaseService } from '../../services/FirebaseService';
 import { CATEGORIES, getCategoryById } from '../../data/categories';
 import { useToast } from '../../context/ToastContext';
-import { useCurrency } from '../../context/CurrencyContext';
 import ImageUploader from './ImageUploader';
 
 const SmartScan = ({ user }) => {
@@ -14,7 +13,6 @@ const SmartScan = ({ user }) => {
     const [error, setError] = useState(null);
     const [note, setNote] = useState('');
     const { showToast } = useToast();
-    const { formatAmount } = useCurrency();
 
     const handleImageUpload = async (base64Image) => {
         setLoading(true);
@@ -57,7 +55,7 @@ const SmartScan = ({ user }) => {
             setResult(parsed);
             setNote('');
             showToast('Expense added successfully!', 'success');
-        } catch (err) {
+        } catch {
             setError("Failed to parse note. Please try again.");
             showToast('Failed to parse note', 'error');
         } finally {

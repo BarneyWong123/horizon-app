@@ -17,12 +17,12 @@ const CalculatorInput = ({ onApply, onClose, initialValue = '0' }) => {
 
     const calculate = () => {
         try {
-            // Basic calculation using eval (safe for numeric only)
+            // Basic calculation using Function (safe for numeric only)
             const fullEquation = equation + display;
-            const result = eval(fullEquation.replace(/[^-+/*0-9.]/g, ''));
+            const result = Function('"use strict";return (' + fullEquation.replace(/[^-+/*0-9.]/g, '') + ')')();
             const formattedResult = Number(result).toFixed(2);
             onApply(formattedResult);
-        } catch (err) {
+        } catch {
             setDisplay('Error');
         }
     };
@@ -55,7 +55,7 @@ const CalculatorInput = ({ onApply, onClose, initialValue = '0' }) => {
                     </div>
 
                     <div className="grid grid-cols-4 gap-2">
-                        {buttons.map((row, i) => (
+                        {buttons.map((row) => (
                             row.map((btn) => (
                                 <button
                                     key={btn}

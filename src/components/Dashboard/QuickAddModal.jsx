@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { X, Loader2, Delete, Wallet, ChevronDown } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { X, Loader2, Delete, ChevronDown } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { FirebaseService } from '../../services/FirebaseService';
 import { useToast } from '../../context/ToastContext';
@@ -9,7 +8,6 @@ import { useCategory } from '../../context/CategoryContext';
 import { CURRENCIES, getCurrencyByCode } from '../../data/currencies';
 
 const QuickAddModal = ({ isOpen, onClose, user, accounts, selectedAccountId: defaultAccountId }) => {
-    const navigate = useNavigate();
     const [amount, setAmount] = useState('0');
     const [note, setNote] = useState('');
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -43,7 +41,7 @@ const QuickAddModal = ({ isOpen, onClose, user, accounts, selectedAccountId: def
         } else if (accounts.length > 0 && !accountId) {
             setAccountId(accounts[0].id);
         }
-    }, [preferences?.defaultAccountId, defaultAccountId, accounts]);
+    }, [preferences?.defaultAccountId, defaultAccountId, accounts, accountId]);
 
     // Use selected account's currency by default
     useEffect(() => {
@@ -56,6 +54,106 @@ const QuickAddModal = ({ isOpen, onClose, user, accounts, selectedAccountId: def
             setCurrency(globalCurrency);
         }
     }, [accountId, accounts, globalCurrency]);
+
+    // Keyboard support
+    const selectedCurrencyInfo = getCurrencyByCode(currency);
+
+    const handleCalcInput = useCallback((value) => {
+        if (value === 'C') {
+            setAmount('0');
+        } else if (value === 'DEL') {
+            setAmount(prev => {
+                if (prev.length <= 1) return '0';
+                if (prev === 'Error') return '0';
+                return prev.slice(0, -1);
+            });
+        } else if (value === '=') {
+            try {
+                // Safe evaluation
+                // Replace visual X with * if needed (though we use * in state for simplicity)
+                const safeExpression = amount.replace(/[^0-9.+\-*/]/g, '');
+                // eslint-disable-next-line
+                const result = Function('"use strict";return (' + safeExpression + ')')();
+                setAmount(String(parseFloat(result.toFixed(2))));
+            } catch (e) {
+                setAmount('Error');
+            }
+        } else if (['+', '-', '*', '/'].includes(value)) {
+            // Prevent double operators
+            if (['+', '-', '*', '/'].includes(amount.slice(-1))) {
+                setAmount(prev => prev.slice(0, -1) + value);
+            } else {
+                setAmount(prev => prev + value);
+            }
+        } else {
+            // Numbers
+            setAmount(prev => {
+                if (prev === '0' || prev === 'Error') return value;
+                return prev + value;
+            });
+        }
+    }, [amount]);
+
+    const handleSubmit = useCallback(async (e) => {
+        if (e) e.preventDefault();
+
+        // Evaluate if there's an unfinished expression
+        let finalAmount = amount;
+        if (['+', '-', '*', '/'].some(op => amount.includes(op))) {
+            try {
+                const safeExpression = amount.replace(/[^0-9.+\-*/]/g, '');
+                // eslint-disable-next-line
+                const result = Function('"use strict";return (' + safeExpression + ')')();
+                finalAmount = String(result);
+            } catch {
+                showToast('Invalid calculation', 'error');
+                return;
+            }
+        }
+
+        const numAmount = parseFloat(finalAmount);
+        if (!numAmount || numAmount <= 0 || isNaN(numAmount)) {
+            showToast('Please enter a valid amount', 'error');
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const accountUpdates = [];
+            if (accountId) {
+                const selectedAccount = accounts.find(a => a.id === accountId);
+                if (selectedAccount) {
+                    const deductionAmount = convert(numAmount, currency, selectedAccount.currency || 'USD');
+                    accountUpdates.push({
+                        accountId: accountId,
+                        changeAmount: -deductionAmount // Expense reduces balance
+                    });
+                }
+            }
+
+            await FirebaseService.addTransaction(user.uid, {
+                total: numAmount,
+                category: categoryId,
+                merchant: note || categories.find(c => c.id === categoryId)?.name || 'Expense',
+                date: date,
+                accountId: accountId || null,
+                currency: currency,
+                type: 'expense'
+            }, accountUpdates);
+
+            setAmount('0');
+            setNote('');
+            setDate(new Date().toISOString().split('T')[0]);
+            setCategoryId('food');
+            showToast('Expense added successfully!', 'success');
+            onClose();
+        } catch (err) {
+            console.error(err);
+            showToast('Failed to add expense', 'error');
+        } finally {
+            setLoading(false);
+        }
+    }, [accountId, accounts, amount, categories, categoryId, convert, currency, date, note, onClose, showToast, user.uid]);
 
     // Keyboard support
     useEffect(() => {
@@ -101,106 +199,7 @@ const QuickAddModal = ({ isOpen, onClose, user, accounts, selectedAccountId: def
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [isOpen, amount, note, categoryId, accountId, currency]); // Dependencies for submit
-
-    if (!isOpen) return null;
-
-    const selectedCurrencyInfo = getCurrencyByCode(currency);
-
-    const handleCalcInput = (value) => {
-        if (value === 'C') {
-            setAmount('0');
-        } else if (value === 'DEL') {
-            setAmount(prev => {
-                if (prev.length <= 1) return '0';
-                if (prev === 'Error') return '0';
-                return prev.slice(0, -1);
-            });
-        } else if (value === '=') {
-            try {
-                // Safe evaluation
-                // Replace visual X with * if needed (though we use * in state for simplicity)
-                const safeExpression = amount.replace(/[^0-9.+\-*/]/g, '');
-                // eslint-disable-next-line
-                const result = Function('"use strict";return (' + safeExpression + ')')();
-                setAmount(String(parseFloat(result.toFixed(2))));
-            } catch (e) {
-                setAmount('Error');
-            }
-        } else if (['+', '-', '*', '/'].includes(value)) {
-            // Prevent double operators
-            if (['+', '-', '*', '/'].includes(amount.slice(-1))) {
-                setAmount(prev => prev.slice(0, -1) + value);
-            } else {
-                setAmount(prev => prev + value);
-            }
-        } else {
-            // Numbers
-            setAmount(prev => {
-                if (prev === '0' || prev === 'Error') return value;
-                return prev + value;
-            });
-        }
-    };
-
-    const handleSubmit = async (e) => {
-        if (e) e.preventDefault();
-
-        // Evaluate if there's an unfinished expression
-        let finalAmount = amount;
-        if (['+', '-', '*', '/'].some(op => amount.includes(op))) {
-            try {
-                const safeExpression = amount.replace(/[^0-9.+\-*/]/g, '');
-                const result = Function('"use strict";return (' + safeExpression + ')')();
-                finalAmount = String(result);
-            } catch (e) {
-                showToast('Invalid calculation', 'error');
-                return;
-            }
-        }
-
-        const numAmount = parseFloat(finalAmount);
-        if (!numAmount || numAmount <= 0 || isNaN(numAmount)) {
-            showToast('Please enter a valid amount', 'error');
-            return;
-        }
-
-        setLoading(true);
-        try {
-            await FirebaseService.addTransaction(user.uid, {
-                total: numAmount,
-                category: categoryId,
-                merchant: note || categories.find(c => c.id === categoryId)?.name || 'Expense',
-                date: date,
-                accountId: accountId || null,
-                currency: currency,
-                type: 'expense'
-            });
-
-            if (accountId) {
-                const selectedAccount = accounts.find(a => a.id === accountId);
-                if (selectedAccount) {
-                    const deductionAmount = convert(numAmount, currency, selectedAccount.currency || 'USD');
-                    const newBalance = (selectedAccount.balance || 0) - deductionAmount;
-                    await FirebaseService.updateAccount(user.uid, accountId, {
-                        balance: newBalance
-                    });
-                }
-            }
-
-            setAmount('0');
-            setNote('');
-            setDate(new Date().toISOString().split('T')[0]);
-            setCategoryId('food');
-            showToast('Expense added successfully!', 'success');
-            onClose();
-        } catch (err) {
-            console.error(err);
-            showToast('Failed to add expense', 'error');
-        } finally {
-            setLoading(false);
-        }
-    };
+    }, [isOpen, amount, note, categoryId, accountId, currency, handleCalcInput, handleSubmit, onClose]);
 
     const calcButtons = [
         ['C', '/', '*', 'DEL'],
@@ -210,7 +209,7 @@ const QuickAddModal = ({ isOpen, onClose, user, accounts, selectedAccountId: def
         ['0', '.'] // Last row custom layout
     ];
 
-    const selectedAccount = accountId ? accounts.find(a => a.id === accountId) : null;
+    if (!isOpen) return null;
 
     return (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/60 backdrop-blur-sm">

@@ -67,7 +67,6 @@ const App = () => {
                           <Route path="/scan" element={<SmartScan user={user} />} />
                           <Route path="/transactions" element={<TransactionHistory user={user} />} />
                           <Route path="/accounts" element={<AccountManager user={user} />} />
-                          <Route path="/accounts" element={<AccountManager user={user} />} />
                           <Route path="/assistant" element={<ChatAuditor user={user} />} />
                           <Route path="/settings" element={<SettingsPage user={user} />} />
                           <Route path="*" element={<Navigate to="/" />} />
