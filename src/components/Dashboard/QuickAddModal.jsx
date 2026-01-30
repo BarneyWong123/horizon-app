@@ -17,6 +17,7 @@ const QuickAddModal = ({ isOpen, onClose, user, accounts, selectedAccountId: def
     const [accountId, setAccountId] = useState(defaultAccountId || '');
     const [currency, setCurrency] = useState('USD');
     const [showAdvanced, setShowAdvanced] = useState(false);
+    const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
     const [loading, setLoading] = useState(false);
     const { showToast } = useToast();
     const { selectedCurrency: globalCurrency, convert } = useCurrency();

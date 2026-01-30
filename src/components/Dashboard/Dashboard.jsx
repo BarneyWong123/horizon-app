@@ -37,6 +37,7 @@ const Dashboard = ({ user }) => {
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [customStartDate, setCustomStartDate] = useState('');
     const [customEndDate, setCustomEndDate] = useState('');
+    const [showScanOptions, setShowScanOptions] = useState(false);
 
     useEffect(() => {
         // Initialize default account if none exists
@@ -513,7 +514,7 @@ const Dashboard = ({ user }) => {
 
 
 
-            {/* Hidden Camera Input */}
+            {/* Hidden Photo Inputs */}
             <input
                 id="instant-camera-input"
                 type="file"
@@ -522,18 +523,67 @@ const Dashboard = ({ user }) => {
                 className="hidden"
                 onChange={handleInstantScan}
             />
+            <input
+                id="instant-gallery-input"
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleInstantScan}
+            />
+
+            {/* Scan Options Modal */}
+            {showScanOptions && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                    <div
+                        className="w-full max-w-sm rounded-2xl p-6 space-y-4 animate-in fade-in zoom-in duration-200"
+                        style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-default)' }}
+                    >
+                        <div className="flex items-center justify-between mb-2">
+                            <h3 className="font-bold text-lg" style={{ color: 'var(--text-primary)' }}>Scan Receipt</h3>
+                            <button onClick={() => setShowScanOptions(false)} style={{ color: 'var(--text-muted)' }}>
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <div className="grid grid-cols-1 gap-3">
+                            <button
+                                onClick={() => {
+                                    setShowScanOptions(false);
+                                    document.getElementById('instant-camera-input').click();
+                                }}
+                                className="flex items-center gap-4 p-4 rounded-xl bg-slate-800/50 hover:bg-slate-700/50 transition-all group"
+                            >
+                                <div className="w-12 h-12 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-500 group-hover:scale-110 transition-transform">
+                                    <LucideIcons.Camera className="w-6 h-6" />
+                                </div>
+                                <div className="text-left">
+                                    <p className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>Take Photo</p>
+                                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Use your camera</p>
+                                </div>
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setShowScanOptions(false);
+                                    document.getElementById('instant-gallery-input').click();
+                                }}
+                                className="flex items-center gap-4 p-4 rounded-xl bg-slate-800/50 hover:bg-slate-700/50 transition-all group"
+                            >
+                                <div className="w-12 h-12 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-500 group-hover:scale-110 transition-transform">
+                                    <LucideIcons.Image className="w-6 h-6" />
+                                </div>
+                                <div className="text-left">
+                                    <p className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>Choose from Gallery</p>
+                                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Pick an existing photo</p>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Floating Action Button */}
             <FloatingActionButton
                 onQuickAdd={() => setShowQuickAdd(true)}
-                onScan={() => {
-                    const input = document.getElementById('instant-camera-input');
-                    if (input) {
-                        input.click();
-                    } else {
-                        showToast('Camera not available', 'error');
-                    }
-                }}
+                onScan={() => setShowScanOptions(true)}
             />
 
             {/* Quick Add Modal */}
