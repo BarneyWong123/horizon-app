@@ -261,6 +261,25 @@ export const FirebaseService = {
                 callback(null);
             }
         });
+    },
+
+    async updatePreferences(uid, prefs) {
+        const prefsRef = doc(db, "users", uid, "settings", "preferences");
+        return setDoc(prefsRef, {
+            ...prefs,
+            updatedAt: serverTimestamp()
+        }, { merge: true });
+    },
+
+    subscribeToPreferences(uid, callback) {
+        const prefsRef = doc(db, "users", uid, "settings", "preferences");
+        return onSnapshot(prefsRef, (doc) => {
+            if (doc.exists()) {
+                callback(doc.data());
+            } else {
+                callback(null);
+            }
+        });
     }
 };
 

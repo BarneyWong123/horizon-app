@@ -37,7 +37,16 @@ export const CategoryProvider = ({ children, user }) => {
                     console.error("Error seeding categories:", error);
                 }
             } else {
-                setCategories(data);
+                // De-duplicate categories to prevent UI issues
+                const unique = [];
+                const seen = new Set();
+                data.forEach(cat => {
+                    if (!seen.has(cat.id)) {
+                        seen.add(cat.id);
+                        unique.push(cat);
+                    }
+                });
+                setCategories(unique);
             }
             setLoading(false);
         });

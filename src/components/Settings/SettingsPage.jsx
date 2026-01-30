@@ -12,8 +12,10 @@ import { FirebaseService } from '../../services/FirebaseService';
 import { useTheme } from '../../context/ThemeContext';
 import { useCurrency } from '../../context/CurrencyContext';
 import { useToast } from '../../context/ToastContext';
+import { useCategory } from '../../context/CategoryContext';
 import { useNavigate } from 'react-router-dom';
 import CategorySettingsModal from './CategorySettingsModal';
+import { Check } from 'lucide-react';
 
 const SettingsPage = ({ user }) => {
     const { theme, toggleTheme } = useTheme();
@@ -31,6 +33,33 @@ const SettingsPage = ({ user }) => {
     const [showCategoryModal, setShowCategoryModal] = useState(false);
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     const [currencyModalOpen, setCurrencyModalOpen] = useState(false);
+    const [accountModalOpen, setAccountModalOpen] = useState(false);
+    const [quickAddCatsModalOpen, setQuickAddCatsModalOpen] = useState(false);
+
+    // Preferences & Data
+    const [preferences, setPreferences] = useState({});
+    const [accounts, setAccounts] = useState([]);
+    const { categories } = useCategory();
+
+    useEffect(() => {
+        if (!user) return;
+        const unsubPrefs = FirebaseService.subscribeToPreferences(user.uid, setPreferences);
+        const unsubAccs = FirebaseService.subscribeToAccounts(user.uid, setAccounts);
+        return () => {
+            unsubPrefs();
+            unsubAccs();
+        };
+    }, [user]);
+
+    const updatePref = async (key, value) => {
+        try {
+            await FirebaseService.updatePreferences(user.uid, { [key]: value });
+            showToast('Settings saved', 'success');
+        } catch (error) {
+            console.error(error);
+            showToast('Failed to save settings', 'error');
+        }
+    };
 
     const handleLogout = async () => {
         try {
@@ -131,6 +160,23 @@ const SettingsPage = ({ user }) => {
                 />
             </Section>
 
+            <Section title="Quick Add Preferences">
+                <SettingItem
+                    icon={CreditCard}
+                    label="Default Account"
+                    value={accounts.find(a => a.id === preferences?.defaultAccountId)?.name || 'None'}
+                    onClick={() => setAccountModalOpen(true)}
+                    color="text-emerald-500"
+                />
+                <SettingItem
+                    icon={Settings2}
+                    label="Quick Add Categories"
+                    value={preferences?.quickAddCategories?.length ? `${preferences.quickAddCategories.length} selected` : 'All'}
+                    onClick={() => setQuickAddCatsModalOpen(true)}
+                    color="text-amber-500"
+                />
+            </Section>
+
             <Section title="Appearance">
                 <SettingItem
                     icon={theme === 'dark' ? Moon : Sun}
@@ -140,115 +186,6 @@ const SettingsPage = ({ user }) => {
                     onClick={toggleTheme}
                     color="text-amber-500"
                 />
-            </Section>
-
-            <Section title="Branding & Logo">
-                <div className="p-6 space-y-6">
-                    {/* Logo Preview */}
-                    <div className="flex flex-col items-center justify-center space-y-4">
-                        <div className="w-24 h-24 rounded-full overflow-hidden flex items-center justify-center border-2 border-emerald-500/30 shadow-lg" style={{ backgroundColor: branding.logoUrl ? 'var(--bg-card)' : 'var(--bg-input)' }}>
-                            <img
-                                src={branding.logoUrl || "/horizon_logo.png"}
-                                alt="Logo Preview"
-                                className="w-full h-full object-cover"
-                                style={{
-                                    transform: `scale(${branding.zoom || 1})`,
-                                    objectPosition: `${branding.posX || 50}% ${branding.posY || 50}%`
-                                }}
-                            />
-                        </div>
-                        <div className="flex gap-2">
-                            <button
-                                onClick={() => document.getElementById('logo-upload').click()}
-                                disabled={uploading}
-                                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500 text-white font-bold text-xs hover:bg-emerald-600 transition-colors disabled:opacity-50"
-                            >
-                                <Upload className="w-3.5 h-3.5" />
-                                {uploading ? 'Uploading...' : 'Upload Logo'}
-                            </button>
-                            {!branding.isDefault && (
-                                <button
-                                    onClick={resetBranding}
-                                    className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-xs transition-colors"
-                                    style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-secondary)' }}
-                                >
-                                    <RotateCcw className="w-3.5 h-3.5" />
-                                    Reset
-                                </button>
-                            )}
-                        </div>
-                        <input
-                            id="logo-upload"
-                            type="file"
-                            className="hidden"
-                            accept="image/*"
-                            onChange={async (e) => {
-                                const file = e.target.files[0];
-                                if (file) {
-                                    setUploading(true);
-                                    try {
-                                        await uploadLogo(file);
-                                        showToast('Logo uploaded successfully', 'success');
-                                    } catch (err) {
-                                        showToast('Failed to upload logo', 'error');
-                                    } finally {
-                                        setUploading(false);
-                                    }
-                                }
-                            }}
-                        />
-                    </div>
-
-                    {/* Controls */}
-                    <div className="space-y-4 border-t pt-4" style={{ borderColor: 'var(--border-default)' }}>
-                        <div className="space-y-2">
-                            <div className="flex justify-between text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
-                                <span>Zoom</span>
-                                <span>{(branding.zoom || 1).toFixed(1)}x</span>
-                            </div>
-                            <input
-                                type="range"
-                                min="0.5"
-                                max="10"
-                                step="0.1"
-                                value={branding.zoom || 1}
-                                onChange={(e) => updateBranding({ zoom: parseFloat(e.target.value) })}
-                                className="w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-500"
-                            />
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <div className="flex justify-between text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
-                                    <span>Position X</span>
-                                    <span>{Math.round(branding.posX || 50)}%</span>
-                                </div>
-                                <input
-                                    type="range"
-                                    min="0"
-                                    max="100"
-                                    value={branding.posX || 50}
-                                    onChange={(e) => updateBranding({ posX: parseInt(e.target.value) })}
-                                    className="w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-500"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <div className="flex justify-between text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
-                                    <span>Position Y</span>
-                                    <span>{Math.round(branding.posY || 50)}%</span>
-                                </div>
-                                <input
-                                    type="range"
-                                    min="0"
-                                    max="100"
-                                    value={branding.posY || 50}
-                                    onChange={(e) => updateBranding({ posY: parseInt(e.target.value) })}
-                                    className="w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-500"
-                                />
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </Section>
 
             <Section title="Notifications & Security">
@@ -384,6 +321,107 @@ const SettingsPage = ({ user }) => {
                                     </span>
                                 </button>
                             ))}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Default Account Modal */}
+            {accountModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                    <div
+                        className="rounded-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[80vh]"
+                        style={{
+                            backgroundColor: 'var(--bg-card)',
+                            border: '1px solid var(--border-default)'
+                        }}
+                    >
+                        <div className="flex items-center justify-between p-4 border-b" style={{ borderColor: 'var(--border-default)' }}>
+                            <h3 className="font-bold" style={{ color: 'var(--text-primary)' }}>Select Default Account</h3>
+                            <button onClick={() => setAccountModalOpen(false)} style={{ color: 'var(--text-muted)' }}>
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <div className="overflow-y-auto p-2">
+                            <button
+                                onClick={() => {
+                                    updatePref('defaultAccountId', null);
+                                    setAccountModalOpen(false);
+                                }}
+                                className="w-full text-left p-4 rounded-xl hover:bg-slate-800 transition-colors"
+                            >
+                                <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>None (Remember last)</span>
+                            </button>
+                            {accounts.map(acc => (
+                                <button
+                                    key={acc.id}
+                                    onClick={() => {
+                                        updatePref('defaultAccountId', acc.id);
+                                        setAccountModalOpen(false);
+                                    }}
+                                    className="w-full flex items-center justify-between p-4 rounded-xl hover:bg-slate-800 transition-colors"
+                                    style={{
+                                        backgroundColor: preferences?.defaultAccountId === acc.id ? 'var(--bg-input)' : 'transparent'
+                                    }}
+                                >
+                                    <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{acc.name}</span>
+                                    {preferences?.defaultAccountId === acc.id && <Check className="w-4 h-4 text-emerald-500" />}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Quick Add Categories Modal */}
+            {quickAddCatsModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                    <div
+                        className="rounded-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[80vh]"
+                        style={{
+                            backgroundColor: 'var(--bg-card)',
+                            border: '1px solid var(--border-default)'
+                        }}
+                    >
+                        <div className="flex items-center justify-between p-4 border-b" style={{ borderColor: 'var(--border-default)' }}>
+                            <div className="flex flex-col">
+                                <h3 className="font-bold" style={{ color: 'var(--text-primary)' }}>Quick Add Categories</h3>
+                                <p className="text-[10px] text-slate-500">Selected categories will show in minimal view</p>
+                            </div>
+                            <button onClick={() => setQuickAddCatsModalOpen(false)} style={{ color: 'var(--text-muted)' }}>
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <div className="overflow-y-auto p-2 grid grid-cols-2 gap-2">
+                            {categories.map(cat => {
+                                const isSelected = preferences?.quickAddCategories?.includes(cat.id);
+                                return (
+                                    <button
+                                        key={cat.id}
+                                        onClick={() => {
+                                            const current = preferences?.quickAddCategories || [];
+                                            const updated = isSelected
+                                                ? current.filter(id => id !== cat.id)
+                                                : [...current, cat.id];
+                                            updatePref('quickAddCategories', updated);
+                                        }}
+                                        className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${isSelected ? 'border-emerald-500 bg-emerald-500/10' : 'border-slate-800 hover:bg-slate-800'}`}
+                                    >
+                                        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${cat.color}20` }}>
+                                            <span className="text-sm" style={{ color: cat.color }}>{cat.name[0]}</span>
+                                        </div>
+                                        <span className="text-xs font-medium truncate" style={{ color: 'var(--text-primary)' }}>{cat.name}</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                        <div className="p-4 border-t" style={{ borderColor: 'var(--border-default)' }}>
+                            <button
+                                onClick={() => setQuickAddCatsModalOpen(false)}
+                                className="w-full py-3 bg-emerald-500 text-white rounded-xl font-bold"
+                            >
+                                Done
+                            </button>
                         </div>
                     </div>
                 </div>

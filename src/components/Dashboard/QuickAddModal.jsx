@@ -12,23 +12,37 @@ const QuickAddModal = ({ isOpen, onClose, user, accounts, selectedAccountId: def
     const navigate = useNavigate();
     const [amount, setAmount] = useState('0');
     const [note, setNote] = useState('');
+    const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [categoryId, setCategoryId] = useState('food');
     const [accountId, setAccountId] = useState(defaultAccountId || '');
     const [currency, setCurrency] = useState('USD');
-    const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
+    const [showAdvanced, setShowAdvanced] = useState(false);
     const [loading, setLoading] = useState(false);
     const { showToast } = useToast();
     const { selectedCurrency: globalCurrency, convert } = useCurrency();
-    const { categories } = useCategory();
+    const { categories: allCategories } = useCategory();
+    const [preferences, setPreferences] = useState(null);
+
+    useEffect(() => {
+        if (!user) return;
+        return FirebaseService.subscribeToPreferences(user.uid, setPreferences);
+    }, [user]);
+
+    // Derived values
+    const categories = preferences?.quickAddCategories?.length
+        ? allCategories.filter(c => preferences.quickAddCategories.includes(c.id))
+        : allCategories;
 
     // Update account and currency when selections change
     useEffect(() => {
-        if (defaultAccountId) {
+        if (preferences?.defaultAccountId) {
+            setAccountId(preferences.defaultAccountId);
+        } else if (defaultAccountId) {
             setAccountId(defaultAccountId);
         } else if (accounts.length > 0 && !accountId) {
             setAccountId(accounts[0].id);
         }
-    }, [defaultAccountId, accounts]);
+    }, [preferences?.defaultAccountId, defaultAccountId, accounts]);
 
     // Use selected account's currency by default
     useEffect(() => {
@@ -46,6 +60,11 @@ const QuickAddModal = ({ isOpen, onClose, user, accounts, selectedAccountId: def
     useEffect(() => {
         const handleKeyDown = (e) => {
             if (!isOpen) return;
+
+            // Don't intercept if an input or textarea is focused
+            if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') {
+                return;
+            }
 
             // Prevent default for calculator keys to avoid side effects (except modifiers)
             const key = e.key;
@@ -151,7 +170,7 @@ const QuickAddModal = ({ isOpen, onClose, user, accounts, selectedAccountId: def
                 total: numAmount,
                 category: categoryId,
                 merchant: note || categories.find(c => c.id === categoryId)?.name || 'Expense',
-                date: new Date().toISOString().split('T')[0],
+                date: date,
                 accountId: accountId || null,
                 currency: currency,
                 type: 'expense'
@@ -170,6 +189,7 @@ const QuickAddModal = ({ isOpen, onClose, user, accounts, selectedAccountId: def
 
             setAmount('0');
             setNote('');
+            setDate(new Date().toISOString().split('T')[0]);
             setCategoryId('food');
             showToast('Expense added successfully!', 'success');
             onClose();
@@ -201,166 +221,209 @@ const QuickAddModal = ({ isOpen, onClose, user, accounts, selectedAccountId: def
                 }}
             >
                 {/* Header */}
-                <div className="flex items-center justify-between p-3" style={{ borderBottom: '1px solid var(--border-default)' }}>
-                    <h3 className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>Add Transaction</h3>
-                    <button onClick={onClose} style={{ color: 'var(--text-muted)' }}>
+                <div className="flex items-center justify-between p-4" style={{ borderBottom: '1px solid var(--border-default)' }}>
+                    <h3 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>New Expense</h3>
+                    <button onClick={onClose} style={{ color: 'var(--text-muted)' }} className="p-1 hover:bg-slate-800 rounded-full transition-colors">
                         <X className="w-5 h-5" />
                     </button>
                 </div>
 
-                <div className="p-3 space-y-3">
-                    {/* Amount Display */}
-                    <div className="rounded-xl p-3" style={{ backgroundColor: 'var(--bg-input)' }}>
-                        <div className="flex items-center justify-between mb-1">
-                            <label className="text-[10px] font-bold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Amount</label>
-                            {/* Currency Picker */}
-                            <div className="relative">
+                <div className="p-4 space-y-6">
+                    {/* Amount & Note Group */}
+                    <div className="space-y-4">
+                        <div className="relative group">
+                            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-500 font-bold text-xl">
+                                {selectedCurrencyInfo?.symbol || '$'}
+                            </div>
+                            <input
+                                type="text"
+                                onClick={() => !showAdvanced && setShowAdvanced(true)}
+                                onFocus={(e) => e.target.select()}
+                                className="w-full bg-slate-800/50 border-2 border-slate-700/50 rounded-2xl py-6 pl-12 pr-4 text-4xl font-bold text-white focus:border-emerald-500/50 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all cursor-pointer"
+                                value={amount}
+                                onChange={(e) => setAmount(e.target.value)}
+                            />
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
                                 <button
                                     type="button"
-                                    onClick={() => setShowCurrencyPicker(!showCurrencyPicker)}
-                                    className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] transition-colors"
-                                    style={{ backgroundColor: 'var(--bg-hover)' }}
+                                    onClick={() => setShowAdvanced(!showAdvanced)}
+                                    className={`p-2 rounded-xl transition-all ${showAdvanced ? 'bg-emerald-500 text-white' : 'bg-slate-700 text-slate-400 hover:text-white'}`}
+                                    title="Show Calculator & Details"
                                 >
-                                    <span>{selectedCurrencyInfo?.flag}</span>
-                                    <span style={{ color: 'var(--text-secondary)' }}>{currency}</span>
-                                    <ChevronDown className={`w-3 h-3 transition-transform ${showCurrencyPicker ? 'rotate-180' : ''}`} style={{ color: 'var(--text-muted)' }} />
+                                    <LucideIcons.Calculator className="w-5 h-5" />
                                 </button>
-                                {showCurrencyPicker && (
-                                    <div
-                                        className="absolute top-full mt-1 right-0 w-44 rounded-xl shadow-2xl z-20 max-h-48 overflow-y-auto"
-                                        style={{
-                                            backgroundColor: 'var(--bg-card)',
-                                            border: '1px solid var(--border-default)'
-                                        }}
-                                    >
-                                        {CURRENCIES.map(c => (
-                                            <button
-                                                key={c.code}
-                                                type="button"
-                                                onClick={() => {
-                                                    setCurrency(c.code);
-                                                    setShowCurrencyPicker(false);
-                                                }}
-                                                className="w-full px-3 py-2 text-left flex items-center gap-2 text-sm"
-                                                style={{
-                                                    backgroundColor: currency === c.code ? 'var(--bg-hover)' : 'transparent'
-                                                }}
-                                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
-                                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = currency === c.code ? 'var(--bg-hover)' : 'transparent'}
-                                            >
-                                                <span>{c.flag}</span>
-                                                <span style={{ color: 'var(--text-primary)' }}>{c.code}</span>
-                                                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{c.symbol}</span>
-                                            </button>
-                                        ))}
-                                    </div>
-                                )}
                             </div>
                         </div>
-                        <div className="text-2xl font-bold tracking-wider overflow-x-auto whitespace-nowrap scrollbar-hide" style={{ color: 'var(--text-primary)' }}>
-                            {amount || '0'}
+
+                        <div className="flex items-center gap-4">
+                            <input
+                                type="text"
+                                placeholder="What did you buy?"
+                                autoFocus
+                                className="flex-1 bg-transparent border-none p-0 text-xl text-slate-200 focus:ring-0 outline-none placeholder:text-slate-600 font-medium"
+                                value={note}
+                                onChange={(e) => setNote(e.target.value)}
+                            />
+                            {/* Date Pill in Minimal View */}
+                            <div className="relative">
+                                <input
+                                    type="date"
+                                    className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                                    value={date}
+                                    onChange={(e) => setDate(e.target.value)}
+                                />
+                                <div className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-slate-800 text-slate-400 text-xs font-medium border border-slate-700 pointer-events-none">
+                                    <LucideIcons.Calendar className="w-3 h-3" />
+                                    <span>{date === new Date().toISOString().split('T')[0] ? 'Today' : date}</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    {/* Calculator Keypad */}
-                    <div className="grid grid-cols-4 gap-1.5">
-                        {calcButtons.map((row, rowIdx) => (
-                            <React.Fragment key={rowIdx}>
-                                {row.map((btn) => (
-                                    <button
-                                        key={btn}
-                                        type="button"
-                                        onClick={() => handleCalcInput(btn)}
-                                        className={`py-2 rounded-lg font-bold text-base transition-all active:scale-95 ${btn === 'DEL' ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30' :
-                                            btn === 'C' ? 'bg-amber-500/20 text-amber-400 hover:bg-amber-500/30' :
-                                                btn === '=' ? 'bg-emerald-500 text-white hover:bg-emerald-600 row-span-2' : // Not actually row-span in this grid structure
-                                                    ['/', '*', '-', '+'].includes(btn) ? 'bg-slate-700 text-emerald-400 hover:bg-slate-600' :
-                                                        btn === '0' ? 'col-span-2 bg-slate-800 text-slate-200 hover:bg-slate-700' :
-                                                            'bg-slate-800 text-slate-200 hover:bg-slate-700'
-                                            }`}
-                                    >
-                                        {btn === 'DEL' ? <Delete className="w-4 h-4 mx-auto" /> : btn}
-                                    </button>
-                                ))}
-                            </React.Fragment>
-                        ))}
-                    </div>
-
-                    {/* Note Input - Moved Here */}
-                    <div>
-                        <input
-                            type="text"
-                            placeholder="Add a note... (e.g. Lunch at cafe)"
-                            className="w-full bg-slate-800 border-none rounded-lg py-2.5 px-4 text-sm text-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none placeholder:text-slate-500"
-                            value={note}
-                            onChange={(e) => setNote(e.target.value)}
-                        />
-                    </div>
-
-                    {/* Account Selector */}
-                    {accounts.length > 0 && (
-                        <div className="grid grid-cols-2 gap-2">
-                            {accounts.map((account) => {
-                                const IconComponent = LucideIcons[account.icon] || LucideIcons.Wallet;
-                                const accountCurrency = getCurrencyByCode(account.currency || 'USD');
+                    {/* Compact Categories */}
+                    <div className="space-y-3">
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Quick Category</label>
+                        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4">
+                            {categories.map((cat) => {
+                                const IconComp = LucideIcons[cat.icon] || LucideIcons.CircleDot;
+                                const isActive = categoryId === cat.id;
                                 return (
                                     <button
-                                        key={account.id}
+                                        key={cat.id}
                                         type="button"
-                                        onClick={() => setAccountId(account.id)}
-                                        className={`flex items-center gap-2 p-3 rounded-xl transition-all ${accountId === account.id
-                                            ? 'bg-slate-700 ring-1 ring-emerald-500'
-                                            : 'bg-slate-800 hover:bg-slate-700'
+                                        onClick={() => setCategoryId(cat.id)}
+                                        className={`flex flex-col items-center min-w-[70px] p-3 rounded-2xl transition-all ${isActive
+                                            ? 'bg-slate-700 ring-2 ring-emerald-500/50 shadow-lg'
+                                            : 'bg-slate-800/50 hover:bg-slate-700/50 grayscale opacity-60 hover:grayscale-0 hover:opacity-100'
                                             }`}
                                     >
                                         <div
-                                            className="w-8 h-8 rounded-lg flex items-center justify-center"
-                                            style={{ backgroundColor: `${account.color}20` }}
+                                            className="w-10 h-10 rounded-xl flex items-center justify-center mb-1.5"
+                                            style={{ backgroundColor: isActive ? `${cat.color}30` : 'transparent' }}
                                         >
-                                            <IconComponent className="w-4 h-4" style={{ color: account.color }} />
+                                            <IconComp className="w-5 h-5" style={{ color: cat.color }} />
                                         </div>
-                                        <div className="flex-1 text-left overflow-hidden">
-                                            <p className="text-xs font-bold text-slate-200 truncate">{account.name}</p>
-                                            <p className="text-[10px] text-slate-500">
-                                                {accountCurrency?.symbol}{account.balance?.toFixed(2)}
-                                            </p>
-                                        </div>
+                                        <span className={`text-[10px] font-bold ${isActive ? 'text-white' : 'text-slate-500'}`}>
+                                            {cat.name.split(' ')[0]}
+                                        </span>
                                     </button>
                                 );
                             })}
                         </div>
-                    )}
-
-                    {/* Category Grid */}
-                    <div className="grid grid-cols-5 gap-1.5">
-                        {categories.slice(0, 10).map((cat) => {
-                            const IconComponent = LucideIcons[cat.icon] || LucideIcons.CircleDot;
-                            const isActive = categoryId === cat.id;
-                            return (
-                                <button
-                                    key={cat.id}
-                                    type="button"
-                                    onClick={() => setCategoryId(cat.id)}
-                                    className={`flex flex-col items-center p-2 rounded-lg transition-all ${isActive
-                                        ? 'bg-slate-800 ring-1 ring-emerald-500' // Base active style
-                                        : 'bg-slate-800 hover:bg-slate-700 text-slate-400'
-                                        }`}
-                                    style={isActive ? { backgroundColor: `${cat.color}20`, color: cat.color } : {}}
-                                >
-                                    <IconComponent className="w-4 h-4 mb-1" style={!isActive ? { color: cat.color } : {}} />
-                                    <span className="text-[10px] truncate w-full text-center">{cat.name.split(' ')[0]}</span>
-                                </button>
-                            );
-                        })}
                     </div>
+
+                    {/* Advanced Section */}
+                    {showAdvanced && (
+                        <div className="space-y-6 pt-4 border-t border-slate-800 animate-in fade-in slide-in-from-top-4 duration-300">
+                            {/* Calculator */}
+                            <div className="grid grid-cols-4 gap-2">
+                                {calcButtons.map((row, rowIdx) => (
+                                    <React.Fragment key={rowIdx}>
+                                        {row.map((btn) => (
+                                            <button
+                                                key={btn}
+                                                type="button"
+                                                onClick={() => handleCalcInput(btn)}
+                                                className={`py-3 rounded-xl font-bold text-lg transition-all active:scale-95 ${btn === 'DEL' ? 'bg-red-500/10 text-red-500 hover:bg-red-500/20' :
+                                                    btn === 'C' ? 'bg-amber-500/10 text-amber-500 hover:bg-amber-500/20' :
+                                                        btn === '=' ? 'bg-emerald-500 text-white hover:bg-emerald-600' :
+                                                            ['/', '*', '-', '+'].includes(btn) ? 'bg-slate-800 text-emerald-400 hover:bg-slate-700' :
+                                                                btn === '0' ? 'col-span-1 bg-slate-800 text-slate-300 hover:bg-slate-700' :
+                                                                    'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                                                    }`}
+                                            >
+                                                {btn === 'DEL' ? <LucideIcons.Delete className="w-5 h-5 mx-auto" /> : btn}
+                                            </button>
+                                        ))}
+                                    </React.Fragment>
+                                ))}
+                            </div>
+
+                            {/* Date & Account */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Date</label>
+                                    <input
+                                        type="date"
+                                        className="w-full bg-slate-800 border border-slate-700 rounded-xl py-3 px-4 text-sm text-slate-200 outline-none"
+                                        value={date}
+                                        onChange={(e) => setDate(e.target.value)}
+                                        style={{ colorScheme: 'dark' }}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Currency</label>
+                                    <div className="relative">
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowCurrencyPicker(!showCurrencyPicker)}
+                                            className="w-full bg-slate-800 border border-slate-700 rounded-xl py-3 px-4 text-sm text-slate-200 flex items-center justify-between"
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                <span>{selectedCurrencyInfo?.flag}</span>
+                                                <span>{currency}</span>
+                                            </div>
+                                            <ChevronDown className="w-4 h-4 text-slate-500" />
+                                        </button>
+                                        {showCurrencyPicker && (
+                                            <div className="absolute bottom-full mb-2 right-0 w-44 rounded-xl shadow-2xl bg-slate-900 border border-slate-800 z-30 max-h-48 overflow-y-auto">
+                                                {CURRENCIES.map(c => (
+                                                    <button
+                                                        key={c.code}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setCurrency(c.code);
+                                                            setShowCurrencyPicker(false);
+                                                        }}
+                                                        className="w-full px-4 py-2 text-left flex items-center gap-3 text-sm hover:bg-slate-800 transition-colors"
+                                                    >
+                                                        <span>{c.flag}</span>
+                                                        <span className="text-slate-200">{c.code}</span>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Payment Account</label>
+                                <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                                    {accounts.map((acc) => {
+                                        const IconComp = LucideIcons[acc.icon] || LucideIcons.Wallet;
+                                        return (
+                                            <button
+                                                key={acc.id}
+                                                type="button"
+                                                onClick={() => setAccountId(acc.id)}
+                                                className={`flex items-center gap-3 p-3 rounded-2xl min-w-[140px] transition-all ${accountId === acc.id
+                                                    ? 'bg-slate-700 ring-2 ring-emerald-500/50'
+                                                    : 'bg-slate-800 hover:bg-slate-700/50'
+                                                    }`}
+                                            >
+                                                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${acc.color}20` }}>
+                                                    <IconComp className="w-4 h-4" style={{ color: acc.color }} />
+                                                </div>
+                                                <div className="text-left">
+                                                    <p className="text-xs font-bold text-slate-200 truncate">{acc.name}</p>
+                                                    <p className="text-[10px] text-slate-500">{getCurrencyByCode(acc.currency || 'USD')?.symbol}{acc.balance?.toFixed(2)}</p>
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Submit */}
                     <button
                         onClick={handleSubmit}
-                        disabled={loading}
-                        className="w-full bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2 mt-2"
+                        disabled={loading || parseFloat(amount) <= 0}
+                        className="w-full bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 disabled:grayscale text-white font-bold py-4 rounded-2xl transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 active:scale-[0.98]"
                     >
-                        {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Save Expense'}
+                        {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Add Expense'}
                     </button>
                 </div>
             </div>

@@ -11,7 +11,8 @@ import CategorySettingsModal from '../Settings/CategorySettingsModal';
 import { Wallet, TrendingDown, Calendar, ChevronRight, Filter, ChevronDown, CalendarDays, X, Settings2 } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { useCategory } from '../../context/CategoryContext';
-
+import { useToast } from '../../context/ToastContext';
+import { OpenAIService } from '../../services/OpenAIService';
 import { useCurrency } from '../../context/CurrencyContext';
 import BudgetProgress from './BudgetProgress';
 
@@ -19,6 +20,7 @@ const Dashboard = ({ user }) => {
     const navigate = useNavigate();
     const { formatAmount, convert } = useCurrency();
     const { categories } = useCategory();
+    const { showToast } = useToast();
     const [transactions, setTransactions] = useState([]);
     const [accounts, setAccounts] = useState([]);
     const [selectedAccountId, setSelectedAccountId] = useState(null);
@@ -44,6 +46,9 @@ const Dashboard = ({ user }) => {
             setTransactions(data);
             setLoading(false);
         }, selectedAccountId);
+
+        // Auto-scan listener if navigated with intent? 
+        // Not needed if we do it directly here.
 
         const unsubAccounts = FirebaseService.subscribeToAccounts(user.uid, (data) => {
             setAccounts(data);
@@ -91,25 +96,26 @@ const Dashboard = ({ user }) => {
 
     const stats = useMemo(() => {
         const totalSpent = filteredTransactions.reduce((acc, curr) => {
+            if (curr.type === 'income' || curr.category === 'income') return acc;
             const amountInUSD = convert(curr.total || 0, curr.currency || 'USD', 'USD');
             return acc + amountInUSD;
         }, 0);
 
         const dayOfMonth = new Date().getDate() || 1;
 
-        const dailyRate = totalSpent / dayOfMonth;
-        const monthlyRate = totalSpent; // If filtering by month, totalSpent is the monthly spend so far. 
-        // If "All Time", we need to divide by months. For simplicity, let's just show Total vs Daily.
-        // Actually, if filter is 'month', Daily Avg = Spent / DayOfMonth. Monthly Avg = Spent (Projected?) or just Total?
-        // User asked for "Daily average interchangeable daily and monthly average".
-        // Let's interpret: "Daily Average" vs "Monthly Average".
-        // If viewing "Today", Monthly Avg doesn't make sense.
-        // If viewing "Month", Daily = Spent/Day, Monthly = Spent (so far).
-        // Let's stick to: Daily Rate and Projected Monthly Rate? or just Average per month if viewing "Year".
+        const totalIncome = filteredTransactions.reduce((acc, curr) => {
+            if (curr.type === 'income' || curr.category === 'income') {
+                const amountInUSD = convert(curr.total || 0, curr.currency || 'USD', 'USD');
+                return acc + amountInUSD;
+            }
+            return acc;
+        }, 0);
 
-        // Simple logic for now:
-        // Daily Rate = totalSpent / daysPassed
-        // Monthly Rate = totalSpent / monthsPassed (if > 1 month) or totalSpent (if this month)
+        const dailyRate = totalSpent / dayOfMonth;
+        const dailyIncome = totalIncome / dayOfMonth;
+        const dailyBurn = dailyRate - dailyIncome;
+
+        const monthlyRate = totalSpent;
 
         let displayAverage = dailyRate;
         if (averageType === 'monthly') {
@@ -124,10 +130,12 @@ const Dashboard = ({ user }) => {
             return acc + balanceInUSD;
         }, 0);
 
-        const daysUntilZero = dailyRate > 0 ? Math.floor(totalBalance / dailyRate) : Infinity;
+        const daysUntilZero = dailyBurn > 0 ? Math.floor(totalBalance / dailyBurn) : Infinity;
 
         // Category breakdown
         const categoryTotals = filteredTransactions.reduce((acc, t) => {
+            // Only count expenses for category breakdown
+            if (t.type === 'income' || t.category === 'income') return acc;
             const cat = t.category || 'other';
             const amountInUSD = convert(t.total || 0, t.currency || 'USD', 'USD');
             acc[cat] = (acc[cat] || 0) + amountInUSD;
@@ -136,7 +144,10 @@ const Dashboard = ({ user }) => {
 
         return {
             totalSpent,
+            totalIncome,
             dailyRate,
+            dailyIncome,
+            dailyBurn,
             displayAverage,
             totalBalance,
             daysUntilZero,
@@ -147,7 +158,42 @@ const Dashboard = ({ user }) => {
     const selectedCategoryData = selectedCategory ? categories.find(c => c.id === selectedCategory) : null;
     const CategoryIcon = selectedCategoryData ? (LucideIcons[selectedCategoryData.icon] || LucideIcons.CircleDot) : null;
 
-    if (loading) {
+    const handleInstantScan = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        showToast('Scanning receipt...', 'info');
+        setLoading(true);
+
+        try {
+            const base64 = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result.split(',')[1]);
+                reader.onerror = reject;
+            });
+
+            const analysis = await OpenAIService.scanReceipt(base64);
+            setEditingTransaction({
+                ...analysis,
+                id: 'new-scan', // Dummy ID to trigger edit modal
+                date: analysis.date || new Date().toISOString().split('T')[0],
+                accountId: selectedAccountId || (accounts.length > 0 ? accounts[0].id : null),
+                currency: 'USD', // Default or detect?
+                isNewScan: true // Flag to handle saving vs updating
+            });
+            showToast('Scan complete! Please verify details.', 'success');
+        } catch (err) {
+            console.error(err);
+            showToast('Failed to scan receipt', 'error');
+        } finally {
+            setLoading(false);
+            // Clear input
+            e.target.value = '';
+        }
+    };
+
+    if (loading && transactions.length === 0) {
         return (
             <div className="animate-pulse space-y-6 p-4">
                 <div className="h-24 rounded-xl" style={{ backgroundColor: 'var(--bg-card)' }}></div>
@@ -467,10 +513,27 @@ const Dashboard = ({ user }) => {
 
 
 
+            {/* Hidden Camera Input */}
+            <input
+                id="instant-camera-input"
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+                onChange={handleInstantScan}
+            />
+
             {/* Floating Action Button */}
             <FloatingActionButton
                 onQuickAdd={() => setShowQuickAdd(true)}
-                onScan={() => navigate('/scan')}
+                onScan={() => {
+                    const input = document.getElementById('instant-camera-input');
+                    if (input) {
+                        input.click();
+                    } else {
+                        showToast('Camera not available', 'error');
+                    }
+                }}
             />
 
             {/* Quick Add Modal */}

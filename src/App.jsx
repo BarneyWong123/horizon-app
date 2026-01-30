@@ -18,6 +18,15 @@ import { BrandingProvider } from './context/BrandingContext';
 const App = () => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(
+    localStorage.getItem('sidebarCollapsed') === 'true'
+  );
+
+  const toggleSidebar = () => {
+    const newState = !isSidebarCollapsed;
+    setIsSidebarCollapsed(newState);
+    localStorage.setItem('sidebarCollapsed', newState);
+  };
 
   useEffect(() => {
     const unsubscribe = FirebaseService.subscribeToAuthChanges((u) => {
@@ -50,9 +59,9 @@ const App = () => {
                     </Routes>
                   ) : (
                     <div className="flex">
-                      <Sidebar user={user} />
+                      <Sidebar user={user} isCollapsed={isSidebarCollapsed} onToggle={toggleSidebar} />
                       {/* Main content: padding for mobile header/bottom nav, left margin for desktop sidebar */}
-                      <main className="flex-1 min-h-screen pt-16 pb-20 md:pt-0 md:pb-0 md:ml-64 md:p-6">
+                      <main className={`flex-1 min-h-screen pt-16 pb-20 md:pt-0 md:pb-0 transition-all duration-300 ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'} md:p-6`}>
                         <Routes>
                           <Route path="/" element={<Dashboard user={user} />} />
                           <Route path="/scan" element={<SmartScan user={user} />} />

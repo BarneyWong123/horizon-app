@@ -12,25 +12,31 @@ export const OpenAIService = {
      */
     async scanReceipt(base64Image) {
         try {
+            const now = new Date();
+            const dateStr = now.toISOString().split('T')[0];
+            const dayName = now.toLocaleDateString('en-US', { weekday: 'long' });
+
             const response = await openai.chat.completions.create({
                 model: "gpt-4o",
                 messages: [
                     {
                         role: "system",
-                        content: `You are a financial auditor. Analyze this receipt and extract:
-1. Merchant name
-2. Total amount (number only, no currency symbols)
-3. Date in ISO format (YYYY-MM-DD), use today's date if not visible
-4. Itemized list with name and price for each item
-5. Spending sentiment: 'Survival' (essentials/necessities), 'Investment' (education/health/assets), or 'Regret' (impulse/unnecessary)
-6. Category: Choose the BEST match from [food, transport, shopping, bills, entertainment, health, travel, income, transfer, other]
+                        content: `You are a financial auditor. Analyze this receipt and extract details.
+Current Date: ${dateStr} (${dayName})
+
+1. Merchant name: Be as accurate as possible.
+2. Total amount: Extract the final total (number only, no currency symbols).
+3. Date: Extract the date on the receipt in ISO format (YYYY-MM-DD). If "Yesterday", "Last Friday", etc. are mentioned or if the year is missing, calculate it relative to the Current Date provided. If no date is visible, use ${dateStr}.
+4. Itemized list: Extract names and prices for identifiable items.
+5. Spending sentiment: 'Survival' (essentials/necessities), 'Investment' (education/health/assets), or 'Regret' (impulse/unnecessary).
+6. Category: Choose the BEST match from [food, transport, shopping, bills, entertainment, health, travel, income, transfer, other].
 
 Category guidance:
 - food: restaurants, groceries, cafes, delivery
 - transport: gas, uber, parking, transit
-- shopping: retail, amazon, clothing
-- bills: utilities, subscriptions, phone
-- entertainment: movies, games, streaming
+- shopping: retail, amazon, clothing, electronics
+- bills: utilities, subscriptions, phone, rent
+- entertainment: movies, games, streaming, events
 - health: pharmacy, gym, medical
 - travel: hotels, flights, vacation
 - other: anything else

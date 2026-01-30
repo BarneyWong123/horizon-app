@@ -30,9 +30,10 @@ const TransactionEditModal = ({ isOpen, onClose, user, transaction, accounts = [
             setCategoryId(transaction.category || 'other');
             setDate(transaction.date?.split('T')[0] || new Date().toISOString().split('T')[0]);
             setCurrency(transaction.currency || 'USD');
-            setAccountId(transaction.accountId || '');
+            // If it's a new scan, we might have a suggested account already or default to first
+            setAccountId(transaction.accountId || (accounts.length > 0 ? accounts[0].id : ''));
         }
-    }, [transaction]);
+    }, [transaction, accounts]);
 
     if (!isOpen || !transaction) return null;
 
@@ -41,62 +42,85 @@ const TransactionEditModal = ({ isOpen, onClose, user, transaction, accounts = [
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!amount || parseFloat(amount) <= 0) return;
-
         setLoading(true);
         try {
             const newAmount = parseFloat(amount);
-
-            // Handle Balance Adjustments
-            const oldAccountId = transaction.accountId;
-            const oldAmount = transaction.total || 0;
-            const oldCurrency = transaction.currency || 'USD';
-
-            // 1. Revert Old Balance
-            if (oldAccountId) {
-                const oldAccount = accounts.find(a => a.id === oldAccountId);
-                if (oldAccount) {
-                    const revertAmount = convert(oldAmount, oldCurrency, oldAccount.currency || 'USD');
-                    await FirebaseService.updateAccount(user.uid, oldAccountId, {
-                        balance: (oldAccount.balance || 0) + revertAmount
-                    });
-                }
+            if (!newAmount || newAmount <= 0) {
+                showToast('Please enter a valid amount.', 'error');
+                return;
             }
 
-            // 2. Apply New Balance
-            if (accountId) {
-                // We need the latest account data because it might have changed in the revert step above
-                // For simplicity here, we'll assume sequential updates work or fetch fresh if needed.
-                // Best to fetch or use updated state. Since accounts comes from parent subscription, it might not update fast enough.
-                const targetAccount = accounts.find(a => a.id === accountId);
-                if (targetAccount) {
-                    const deductAmount = convert(newAmount, currency, targetAccount.currency || 'USD');
-                    // Calculate current balance (if it was the same account, adjust based on the revert we just did)
-                    let currentBalance = targetAccount.balance || 0;
-                    if (accountId === oldAccountId) {
-                        const revertAmount = convert(oldAmount, oldCurrency, targetAccount.currency || 'USD');
-                        currentBalance += revertAmount;
+            if (transaction.isNewScan) {
+                // Apply New Balance
+                if (accountId) {
+                    const targetAccount = accounts.find(a => a.id === accountId);
+                    if (targetAccount) {
+                        const deductAmount = convert(newAmount, currency, targetAccount.currency || 'USD');
+                        await FirebaseService.updateAccount(user.uid, accountId, {
+                            balance: (targetAccount.balance || 0) - deductAmount
+                        });
                     }
-
-                    await FirebaseService.updateAccount(user.uid, accountId, {
-                        balance: currentBalance - deductAmount
-                    });
                 }
-            }
 
-            await FirebaseService.updateTransaction(user.uid, transaction.id, {
-                total: newAmount,
-                category: categoryId,
-                merchant: note || categories.find(c => c.id === categoryId)?.name || 'Expense',
-                date: date,
-                currency: currency,
-                accountId: accountId || null
-            });
-            showToast('Transaction updated!', 'success');
+                await FirebaseService.addTransaction(user.uid, {
+                    total: newAmount,
+                    category: categoryId,
+                    merchant: note || categories.find(c => c.id === categoryId)?.name || 'Expense',
+                    date: date,
+                    currency: currency,
+                    accountId: accountId || null,
+                    inputType: 'image',
+                    items: transaction.items || []
+                });
+                showToast('Transaction saved!', 'success');
+            } else {
+                // Handle Balance Adjustments
+                const oldAccountId = transaction.accountId;
+                const oldAmount = transaction.total || 0;
+                const oldCurrency = transaction.currency || 'USD';
+
+                // 1. Revert Old Balance
+                if (oldAccountId) {
+                    const oldAccount = accounts.find(a => a.id === oldAccountId);
+                    if (oldAccount) {
+                        const revertAmount = convert(oldAmount, oldCurrency, oldAccount.currency || 'USD');
+                        await FirebaseService.updateAccount(user.uid, oldAccountId, {
+                            balance: (oldAccount.balance || 0) + revertAmount
+                        });
+                    }
+                }
+
+                // 2. Apply New Balance
+                if (accountId) {
+                    const targetAccount = accounts.find(a => a.id === accountId);
+                    if (targetAccount) {
+                        const deductAmount = convert(newAmount, currency, targetAccount.currency || 'USD');
+                        let currentBalance = targetAccount.balance || 0;
+                        if (accountId === oldAccountId) {
+                            const revertAmount = convert(oldAmount, oldCurrency, targetAccount.currency || 'USD');
+                            currentBalance += revertAmount;
+                        }
+
+                        await FirebaseService.updateAccount(user.uid, accountId, {
+                            balance: currentBalance - deductAmount
+                        });
+                    }
+                }
+
+                await FirebaseService.updateTransaction(user.uid, transaction.id, {
+                    total: newAmount,
+                    category: categoryId,
+                    merchant: note || categories.find(c => c.id === categoryId)?.name || 'Expense',
+                    date: date,
+                    currency: currency,
+                    accountId: accountId || null
+                });
+                showToast('Transaction updated!', 'success');
+            }
             onClose();
         } catch (err) {
             console.error(err);
-            showToast('Failed to update transaction', 'error');
+            showToast('Failed to save transaction', 'error');
         } finally {
             setLoading(false);
         }
@@ -132,9 +156,10 @@ const TransactionEditModal = ({ isOpen, onClose, user, transaction, accounts = [
     return (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
             <div className="w-full max-w-md bg-slate-900 rounded-2xl border border-slate-800 shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
-                {/* Header */}
                 <div className="flex items-center justify-between p-4 border-b border-slate-800">
-                    <h3 className="text-lg font-bold text-white">Edit Transaction</h3>
+                    <h3 className="text-lg font-bold text-white">
+                        {transaction.isNewScan ? 'Confirm Scan' : 'Edit Transaction'}
+                    </h3>
                     <button onClick={onClose} className="text-slate-400 hover:text-white">
                         <X className="w-5 h-5" />
                     </button>
@@ -322,18 +347,27 @@ const TransactionEditModal = ({ isOpen, onClose, user, transaction, accounts = [
                     <div className="flex gap-3 pt-2">
                         <button
                             type="button"
-                            onClick={handleDelete}
+                            onClick={transaction.isNewScan ? onClose : handleDelete}
                             disabled={deleting}
-                            className="flex-1 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
+                            className={`flex-1 font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2 ${transaction.isNewScan
+                                ? 'bg-slate-800 hover:bg-slate-700 text-slate-400'
+                                : 'bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400'
+                                }`}
                         >
-                            {deleting ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Trash2 className="w-4 h-4" /> Delete</>}
+                            {deleting ? (
+                                <Loader2 className="w-5 h-5 animate-spin" />
+                            ) : transaction.isNewScan ? (
+                                'Discard'
+                            ) : (
+                                <><Trash2 className="w-4 h-4" /> Delete</>
+                            )}
                         </button>
                         <button
                             type="submit"
                             disabled={loading || !amount}
                             className="flex-1 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
                         >
-                            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Save Changes'}
+                            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : transaction.isNewScan ? 'Save Expense' : 'Save Changes'}
                         </button>
                     </div>
                 </form>
