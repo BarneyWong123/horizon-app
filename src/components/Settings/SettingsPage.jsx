@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import {
     User, Moon, Sun, Bell, Shield, Wallet, Trash2,
-    ChevronRight, LogOut, Settings2, LayoutDashboard, CreditCard, Lock, X
+    ChevronRight, LogOut, Settings2, LayoutDashboard, CreditCard, Lock, X,
+    Upload, Image as ImageIcon, RotateCcw
 } from 'lucide-react';
+import { useBranding } from '../../context/BrandingContext';
 
 import { CURRENCIES } from '../../data/currencies';
 
@@ -18,10 +20,15 @@ const SettingsPage = ({ user }) => {
     const { selectedCurrency, setCurrency } = useCurrency();
     const { showToast } = useToast();
     const navigate = useNavigate();
+
+    // Branding State & Context
+    const { branding, uploadLogo, updateBranding, resetBranding } = useBranding();
+    const [uploading, setUploading] = useState(false);
+
+    // Other settings state
     const [notifications, setNotifications] = useState(true);
     const [securityPin, setSecurityPin] = useState(false);
     const [showCategoryModal, setShowCategoryModal] = useState(false);
-    const [pinModalOpen, setPinModalOpen] = useState(false);
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     const [currencyModalOpen, setCurrencyModalOpen] = useState(false);
 
@@ -133,6 +140,115 @@ const SettingsPage = ({ user }) => {
                     onClick={toggleTheme}
                     color="text-amber-500"
                 />
+            </Section>
+
+            <Section title="Branding & Logo">
+                <div className="p-6 space-y-6">
+                    {/* Logo Preview */}
+                    <div className="flex flex-col items-center justify-center space-y-4">
+                        <div className="w-24 h-24 rounded-full overflow-hidden flex items-center justify-center border-2 border-emerald-500/30 shadow-lg" style={{ backgroundColor: branding.logoUrl ? 'var(--bg-card)' : 'var(--bg-input)' }}>
+                            <img
+                                src={branding.logoUrl || "/horizon_logo.png"}
+                                alt="Logo Preview"
+                                className="w-full h-full object-cover"
+                                style={{
+                                    transform: `scale(${branding.zoom || 1})`,
+                                    objectPosition: `${branding.posX || 50}% ${branding.posY || 50}%`
+                                }}
+                            />
+                        </div>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => document.getElementById('logo-upload').click()}
+                                disabled={uploading}
+                                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500 text-white font-bold text-xs hover:bg-emerald-600 transition-colors disabled:opacity-50"
+                            >
+                                <Upload className="w-3.5 h-3.5" />
+                                {uploading ? 'Uploading...' : 'Upload Logo'}
+                            </button>
+                            {!branding.isDefault && (
+                                <button
+                                    onClick={resetBranding}
+                                    className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-xs transition-colors"
+                                    style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-secondary)' }}
+                                >
+                                    <RotateCcw className="w-3.5 h-3.5" />
+                                    Reset
+                                </button>
+                            )}
+                        </div>
+                        <input
+                            id="logo-upload"
+                            type="file"
+                            className="hidden"
+                            accept="image/*"
+                            onChange={async (e) => {
+                                const file = e.target.files[0];
+                                if (file) {
+                                    setUploading(true);
+                                    try {
+                                        await uploadLogo(file);
+                                        showToast('Logo uploaded successfully', 'success');
+                                    } catch (err) {
+                                        showToast('Failed to upload logo', 'error');
+                                    } finally {
+                                        setUploading(false);
+                                    }
+                                }
+                            }}
+                        />
+                    </div>
+
+                    {/* Controls */}
+                    <div className="space-y-4 border-t pt-4" style={{ borderColor: 'var(--border-default)' }}>
+                        <div className="space-y-2">
+                            <div className="flex justify-between text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
+                                <span>Zoom</span>
+                                <span>{(branding.zoom || 1).toFixed(1)}x</span>
+                            </div>
+                            <input
+                                type="range"
+                                min="0.5"
+                                max="10"
+                                step="0.1"
+                                value={branding.zoom || 1}
+                                onChange={(e) => updateBranding({ zoom: parseFloat(e.target.value) })}
+                                className="w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+                            />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <div className="flex justify-between text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
+                                    <span>Position X</span>
+                                    <span>{Math.round(branding.posX || 50)}%</span>
+                                </div>
+                                <input
+                                    type="range"
+                                    min="0"
+                                    max="100"
+                                    value={branding.posX || 50}
+                                    onChange={(e) => updateBranding({ posX: parseInt(e.target.value) })}
+                                    className="w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <div className="flex justify-between text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
+                                    <span>Position Y</span>
+                                    <span>{Math.round(branding.posY || 50)}%</span>
+                                </div>
+                                <input
+                                    type="range"
+                                    min="0"
+                                    max="100"
+                                    value={branding.posY || 50}
+                                    onChange={(e) => updateBranding({ posY: parseInt(e.target.value) })}
+                                    className="w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </Section>
 
             <Section title="Notifications & Security">

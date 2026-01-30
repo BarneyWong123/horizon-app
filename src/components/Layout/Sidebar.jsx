@@ -1,14 +1,33 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Receipt, Wallet, MessageSquare, LogOut, Settings, ChevronUp, User } from 'lucide-react';
+import {
+    LayoutDashboard,
+    Receipt,
+    Wallet,
+    MessageSquare,
+    LogOut,
+    Settings,
+    ChevronUp,
+    User,
+    ChevronDown
+} from 'lucide-react';
+import { useBranding } from '../../context/BrandingContext';
 import { FirebaseService } from '../../services/FirebaseService';
-import CurrencySelector from '../UI/CurrencySelector';
 
 const Sidebar = ({ user }) => {
-    const location = useLocation();
     const navigate = useNavigate();
+    const location = useLocation();
+    const { branding } = useBranding();
     const [showUserMenu, setShowUserMenu] = useState(false);
     const menuRef = useRef(null);
+
+    const logoStyle = {
+        transform: `scale(${branding.zoom})`,
+        objectPosition: `${branding.posX}% ${branding.posY}%`,
+        objectFit: 'cover'
+    };
+
+    const logoSrc = branding.logoUrl || "/horizon_logo.png";
 
     const navItems = [
         { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
@@ -51,10 +70,15 @@ const Sidebar = ({ user }) => {
                 }}
             >
                 <div>
-                    {/* Logo */}
+                    {/* Logo Section */}
                     <div className="flex items-center gap-3 mb-8 px-2">
-                        <div className="w-14 h-14 rounded-full overflow-hidden flex items-center justify-center transition-transform hover:scale-110 shadow-sm" style={{ backgroundColor: 'transparent' }}>
-                            <img src="/horizon_logo.png" alt="Horizon" className="w-full h-full object-cover transition-transform scale-[7.8]" style={{ objectPosition: 'center 8%' }} />
+                        <div className="w-14 h-14 rounded-full overflow-hidden flex items-center justify-center transition-transform hover:scale-110 shadow-sm" style={{ backgroundColor: branding.logoUrl ? 'var(--bg-card)' : 'var(--bg-input)' }}>
+                            <img
+                                src={logoSrc}
+                                alt="Horizon"
+                                className="w-full h-full transition-transform"
+                                style={logoStyle}
+                            />
                         </div>
                         <span className="text-xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>Horizon</span>
                     </div>
@@ -139,9 +163,7 @@ const Sidebar = ({ user }) => {
                             <NavLink
                                 key={item.to}
                                 to={item.to}
-                                className={`flex flex-col items-center py-2 px-3 rounded-lg transition-all ${isActive
-                                    ? 'text-emerald-500'
-                                    : ''
+                                className={`flex flex-col items-center py-2 px-3 rounded-lg transition-all ${isActive ? 'text-emerald-500' : 'text-slate-500'
                                     }`}
                                 style={isActive ? {} : { color: 'var(--text-muted)' }}
                             >
@@ -152,7 +174,8 @@ const Sidebar = ({ user }) => {
                     })}
                     <button
                         onClick={() => navigate('/settings')}
-                        className={`flex flex-col items-center py-2 px-3 rounded-lg transition-all ${location.pathname === '/settings' ? 'text-emerald-500' : ''}`}
+                        className={`flex flex-col items-center py-2 px-3 rounded-lg transition-all ${location.pathname === '/settings' ? 'text-emerald-500' : 'text-slate-500'
+                            }`}
                         style={location.pathname === '/settings' ? {} : { color: 'var(--text-muted)' }}
                     >
                         <User className="w-5 h-5" />
@@ -167,8 +190,13 @@ const Sidebar = ({ user }) => {
                 style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-default)' }}
             >
                 <div className="flex items-center gap-2">
-                    <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center shadow-sm" style={{ backgroundColor: 'transparent' }}>
-                        <img src="/horizon_logo.png" alt="Horizon" className="w-full h-full object-cover scale-[7.8]" style={{ objectPosition: 'center 8%' }} />
+                    <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center shadow-sm" style={{ backgroundColor: branding.logoUrl ? 'var(--bg-card)' : 'var(--bg-input)' }}>
+                        <img
+                            src={logoSrc}
+                            alt="Horizon"
+                            className="w-full h-full"
+                            style={logoStyle}
+                        />
                     </div>
                     <span className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>Horizon</span>
                 </div>

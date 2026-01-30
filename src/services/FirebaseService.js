@@ -17,9 +17,15 @@ import {
     onSnapshot,
     serverTimestamp,
     where,
-    getDocs
+    getDocs,
+    setDoc
 } from "firebase/firestore";
-import { auth, db } from "../config/firebase";
+import {
+    ref,
+    uploadBytes,
+    getDownloadURL
+} from "firebase/storage";
+import { auth, db, storage } from "../config/firebase";
 
 const googleProvider = new GoogleAuthProvider();
 
@@ -226,12 +232,35 @@ export const FirebaseService = {
             deleteCollection("transactions"),
             deleteCollection("accounts"),
             deleteCollection("categories"),
-            deleteCollection("chats")
+            deleteCollection("chats"),
+            deleteCollection("settings")
         ]);
+    },
 
-        // Finally delete the user document itself if it exists (though we store mostly in subcollections)
-        // Adjust if we have a top-level user doc. We mostly use subcollections under the UID.
-        // Also delete the top-level user doc ref if we used one, but here we just used hierarchy.
+    // Branding & Settings
+    async uploadLogo(uid, file) {
+        const logoRef = ref(storage, `users/${uid}/branding/logo`);
+        await uploadBytes(logoRef, file);
+        return getDownloadURL(logoRef);
+    },
+
+    async updateBranding(uid, brandingData) {
+        const brandingRef = doc(db, "users", uid, "settings", "branding");
+        return setDoc(brandingRef, {
+            ...brandingData,
+            updatedAt: serverTimestamp()
+        }, { merge: true });
+    },
+
+    subscribeToBranding(uid, callback) {
+        const brandingRef = doc(db, "users", uid, "settings", "branding");
+        return onSnapshot(brandingRef, (doc) => {
+            if (doc.exists()) {
+                callback(doc.data());
+            } else {
+                callback(null);
+            }
+        });
     }
 };
 
