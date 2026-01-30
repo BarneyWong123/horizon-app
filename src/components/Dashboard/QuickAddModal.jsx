@@ -237,6 +237,7 @@ const QuickAddModal = ({ isOpen, onClose, user, accounts, selectedAccountId: def
                             </div>
                             <input
                                 type="text"
+                                autoFocus
                                 onClick={() => !showAdvanced && setShowAdvanced(true)}
                                 onFocus={(e) => e.target.select()}
                                 className="w-full bg-slate-800/50 border-2 border-slate-700/50 rounded-2xl py-6 pl-12 pr-4 text-4xl font-bold text-white focus:border-emerald-500/50 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all cursor-pointer"
@@ -259,7 +260,6 @@ const QuickAddModal = ({ isOpen, onClose, user, accounts, selectedAccountId: def
                             <input
                                 type="text"
                                 placeholder="What did you buy?"
-                                autoFocus
                                 className="flex-1 bg-transparent border-none p-0 text-xl text-slate-200 focus:ring-0 outline-none placeholder:text-slate-600 font-medium"
                                 value={note}
                                 onChange={(e) => setNote(e.target.value)}
