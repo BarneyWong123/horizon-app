@@ -96,29 +96,29 @@ const Dashboard = ({ user }) => {
     }, [transactions, selectedCategory, timePeriod, customStartDate, customEndDate]);
 
     const stats = useMemo(() => {
-        const totalSpent = filteredTransactions.reduce((acc, curr) => {
-            if (curr.type === 'income' || curr.category === 'income') return acc;
+        const { totalSpent, totalIncome, categoryTotals } = filteredTransactions.reduce((acc, curr) => {
             const txCurrency = curr.currency || selectedCurrency; // Default to selectedCurrency, not USD
             const amountInUSD = txCurrency === 'USD' ? (curr.total || 0) : convert(curr.total || 0, txCurrency, 'USD');
-            return acc + amountInUSD;
-        }, 0);
 
-        const dayOfMonth = new Date().getDate() || 1;
-
-        const totalIncome = filteredTransactions.reduce((acc, curr) => {
             if (curr.type === 'income' || curr.category === 'income') {
-                const txCurrency = curr.currency || selectedCurrency;
-                const amountInUSD = txCurrency === 'USD' ? (curr.total || 0) : convert(curr.total || 0, txCurrency, 'USD');
-                return acc + amountInUSD;
+                acc.totalIncome += amountInUSD;
+            } else {
+                acc.totalSpent += amountInUSD;
+                const cat = curr.category || 'other';
+                acc.categoryTotals[cat] = (acc.categoryTotals[cat] || 0) + amountInUSD;
             }
             return acc;
-        }, 0);
+        }, {
+            totalSpent: 0,
+            totalIncome: 0,
+            categoryTotals: {}
+        });
+
+        const dayOfMonth = new Date().getDate() || 1;
 
         const dailyRate = totalSpent / dayOfMonth;
         const dailyIncome = totalIncome / dayOfMonth;
         const dailyBurn = dailyRate - dailyIncome;
-
-        const monthlyRate = totalSpent;
 
         let displayAverage = dailyRate;
         if (averageType === 'monthly') {
@@ -134,17 +134,6 @@ const Dashboard = ({ user }) => {
         }, 0);
 
         const daysUntilZero = dailyBurn > 0 ? Math.floor(totalBalance / dailyBurn) : Infinity;
-
-        // Category breakdown
-        const categoryTotals = filteredTransactions.reduce((acc, t) => {
-            // Only count expenses for category breakdown
-            if (t.type === 'income' || t.category === 'income') return acc;
-            const cat = t.category || 'other';
-            const txCurrency = t.currency || selectedCurrency;
-            const amountInUSD = txCurrency === 'USD' ? (t.total || 0) : convert(t.total || 0, txCurrency, 'USD');
-            acc[cat] = (acc[cat] || 0) + amountInUSD;
-            return acc;
-        }, {});
 
         return {
             totalSpent,
