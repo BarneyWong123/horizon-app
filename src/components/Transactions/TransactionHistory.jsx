@@ -4,7 +4,7 @@ import TransactionList from '../Dashboard/TransactionList';
 import TransactionEditModal from '../Dashboard/TransactionEditModal';
 import { generateCSV } from '../../utils/exportUtils';
 import { useCategory } from '../../context/CategoryContext';
-import { Search, Filter, ArrowLeft, X, ChevronDown, ChevronUp, Calendar, Wallet, Download } from 'lucide-react';
+import { Search, Filter, ArrowLeft, X, ArrowUp, ArrowDown, Calendar, Wallet, Download } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { CATEGORIES } from '../../data/categories';
 import { useCurrency } from '../../context/CurrencyContext';
@@ -157,7 +157,7 @@ const TransactionHistory = ({ user }) => {
                             : 'bg-slate-800 text-slate-400 border border-slate-700 hover:text-white'}`}
                         title={`Sort: ${sortField === 'date' ? 'Date' : 'Amount'} (${sortOrder === 'asc' ? 'Oldest/Lowest' : 'Newest/Highest'})`}
                     >
-                        {sortOrder === 'desc' ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
+                        {sortOrder === 'desc' ? <ArrowDown className="w-4 h-4" /> : <ArrowUp className="w-4 h-4" />}
                     </button>
                     {(searchQuery || filterCategory || filterAccount || filterDateRange !== 'all' || sortField !== 'date' || sortOrder !== 'desc') && (
                         <button

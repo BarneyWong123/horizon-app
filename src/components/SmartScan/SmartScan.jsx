@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Camera, FileText, Loader2, CheckCircle2 } from 'lucide-react';
+import { Camera, FileText, Loader2, CheckCircle2, X, AlertTriangle } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { OpenAIService } from '../../services/OpenAIService';
 import { FirebaseService } from '../../services/FirebaseService';
@@ -10,8 +10,10 @@ import ImageUploader from './ImageUploader';
 
 const SmartScan = ({ user }) => {
     const [loading, setLoading] = useState(false);
+    const [progress, setProgress] = useState(0);
     const [result, setResult] = useState(null);
     const [error, setError] = useState(null);
+    const [showResultModal, setShowResultModal] = useState(false);
     const [note, setNote] = useState('');
     const { showToast } = useToast();
     const { formatAmount } = useCurrency();
@@ -19,20 +21,50 @@ const SmartScan = ({ user }) => {
     const handleImageUpload = async (base64Image) => {
         setLoading(true);
         setError(null);
+        setResult(null);
+        setProgress(0);
+
+        // Simulate progress animation
+        const progressInterval = setInterval(() => {
+            setProgress(prev => {
+                if (prev >= 90) {
+                    clearInterval(progressInterval);
+                    return 90;
+                }
+                return prev + Math.random() * 15;
+            });
+        }, 300);
+
         try {
             const analysis = await OpenAIService.scanReceipt(base64Image);
+            clearInterval(progressInterval);
+            setProgress(100);
+
+            // Check if scan was successful
+            if (analysis.success === false) {
+                setError(analysis.error || "This doesn't appear to be a receipt.");
+                showToast(analysis.error || 'Not a valid receipt', 'error');
+                setLoading(false);
+                return;
+            }
+
+            // Save transaction
             await FirebaseService.addTransaction(user.uid, {
                 ...analysis,
                 inputType: 'image'
             });
+
             setResult(analysis);
-            showToast('Receipt scanned and saved!', 'success');
+            setShowResultModal(true);
+            showToast('Receipt scanned successfully!', 'success');
         } catch (err) {
+            clearInterval(progressInterval);
             setError("Failed to scan receipt. Please try again.");
             showToast('Failed to scan receipt', 'error');
             console.error(err);
         } finally {
             setLoading(false);
+            setProgress(0);
         }
     };
 
@@ -55,6 +87,7 @@ const SmartScan = ({ user }) => {
                 rawInput: note
             });
             setResult(parsed);
+            setShowResultModal(true);
             setNote('');
             showToast('Expense added successfully!', 'success');
         } catch (err) {
@@ -82,6 +115,23 @@ const SmartScan = ({ user }) => {
                         <h2 className="font-medium">Upload Receipt</h2>
                     </div>
                     <ImageUploader onUpload={handleImageUpload} disabled={loading} />
+
+                    {/* Progress Bar */}
+                    {loading && (
+                        <div className="space-y-2 animate-in fade-in duration-300">
+                            <div className="flex items-center justify-between text-xs">
+                                <span className="text-slate-400">Scanning receipt...</span>
+                                <span className="text-emerald-500 font-medium">{Math.round(progress)}%</span>
+                            </div>
+                            <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+                                <div
+                                    className="bg-gradient-to-r from-emerald-500 to-emerald-400 h-full rounded-full transition-all duration-300 ease-out"
+                                    style={{ width: `${progress}%` }}
+                                />
+                            </div>
+                            <p className="text-[10px] text-slate-500 text-center">Analyzing with AI vision...</p>
+                        </div>
+                    )}
                 </div>
 
                 <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4 space-y-4">
@@ -108,68 +158,109 @@ const SmartScan = ({ user }) => {
                 </div>
             </div>
 
-            {result && (
-                <div className="card border-brand-emerald/30 bg-emerald-500/5 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    <div className="flex items-center space-x-3 mb-4">
-                        <CheckCircle2 className="text-brand-emerald w-6 h-6" />
-                        <h3 className="text-lg md:text-xl font-bold text-white">Transaction Recorded</h3>
-                    </div>
-
-                    {/* Main Info Grid */}
-                    <div className="grid grid-cols-2 gap-4 text-sm mb-4">
-                        <div>
-                            <p className="text-slate-500">Merchant</p>
-                            <p className="text-slate-200 font-medium text-lg">{result.merchant}</p>
-                        </div>
-                        <div>
-                            <p className="text-slate-500">Total</p>
-                            <p className="text-brand-emerald font-bold text-lg">${result.total?.toFixed(2)}</p>
-                        </div>
-                        <div>
-                            <p className="text-slate-500">Category</p>
-                            <div className="flex items-center gap-2 mt-1">
-                                {CategoryIcon && (
-                                    <div
-                                        className="w-6 h-6 rounded-lg flex items-center justify-center"
-                                        style={{ backgroundColor: `${category.color}20` }}
-                                    >
-                                        <CategoryIcon className="w-3.5 h-3.5" style={{ color: category.color }} />
-                                    </div>
-                                )}
-                                <span className="text-slate-200 font-medium">{category?.name || 'Other'}</span>
-                            </div>
-                        </div>
-                        <div>
-                            <p className="text-slate-500">Sentiment</p>
-                            <span className={`inline-block mt-1 px-2 py-1 rounded-full text-xs font-bold ${result.sentiment === 'Survival' ? 'bg-blue-500/20 text-blue-400' :
-                                result.sentiment === 'Investment' ? 'bg-emerald-500/20 text-emerald-400' :
-                                    'bg-red-500/20 text-red-400'
-                                }`}>
-                                {result.sentiment}
-                            </span>
-                        </div>
-                    </div>
-
-                    {/* Itemized Items */}
-                    {result.items && result.items.length > 0 && (
-                        <div className="border-t border-slate-700 pt-4">
-                            <p className="text-slate-500 text-sm mb-2">Items ({result.items.length})</p>
-                            <div className="space-y-2 max-h-48 overflow-y-auto">
-                                {result.items.map((item, idx) => (
-                                    <div key={idx} className="flex justify-between items-center py-1.5 px-2 bg-slate-800/50 rounded-lg">
-                                        <span className="text-slate-300 text-sm truncate flex-1">{item.name}</span>
-                                        <span className="text-slate-400 text-sm font-medium ml-2">${item.price?.toFixed(2)}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
+            {/* Error Display */}
+            {error && (
+                <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center gap-3 animate-in slide-in-from-bottom-2 duration-300">
+                    <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0" />
+                    <p className="text-red-400 text-sm">{error}</p>
                 </div>
             )}
 
-            {error && (
-                <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-center">
-                    {error}
+            {/* Result Popup Modal */}
+            {showResultModal && result && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="w-full max-w-md bg-slate-900 border border-emerald-500/30 rounded-2xl shadow-2xl shadow-emerald-500/10 overflow-hidden animate-in zoom-in-95 duration-300">
+                        {/* Header */}
+                        <div className="flex items-center justify-between p-4 bg-emerald-500/10 border-b border-emerald-500/20">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center">
+                                    <CheckCircle2 className="w-6 h-6 text-white" />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-bold text-white">Scan Successful!</h3>
+                                    <p className="text-xs text-emerald-400">Transaction has been saved</p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setShowResultModal(false)}
+                                className="p-2 hover:bg-slate-800 rounded-full transition-colors"
+                            >
+                                <X className="w-5 h-5 text-slate-400" />
+                            </button>
+                        </div>
+
+                        {/* Content */}
+                        <div className="p-5 space-y-4">
+                            {/* Main Info */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold mb-1">Merchant</p>
+                                    <p className="text-white font-medium text-lg">{result.merchant}</p>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold mb-1">Total</p>
+                                    <p className="text-emerald-500 font-bold text-2xl">${result.total?.toFixed(2)}</p>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold mb-1">Date</p>
+                                    <p className="text-white font-medium">{result.date}</p>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold mb-1">Category</p>
+                                    <div className="flex items-center gap-2">
+                                        {CategoryIcon && (
+                                            <div
+                                                className="w-6 h-6 rounded-lg flex items-center justify-center"
+                                                style={{ backgroundColor: `${category.color}20` }}
+                                            >
+                                                <CategoryIcon className="w-3.5 h-3.5" style={{ color: category.color }} />
+                                            </div>
+                                        )}
+                                        <span className="text-white font-medium">{category?.name || 'Other'}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Sentiment */}
+                            <div>
+                                <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold mb-1">Sentiment</p>
+                                <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold ${result.sentiment === 'Survival' ? 'bg-blue-500/20 text-blue-400' :
+                                    result.sentiment === 'Investment' ? 'bg-emerald-500/20 text-emerald-400' :
+                                        'bg-red-500/20 text-red-400'
+                                    }`}>
+                                    {result.sentiment}
+                                </span>
+                            </div>
+
+                            {/* Items */}
+                            {result.items && result.items.length > 0 && (
+                                <div>
+                                    <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold mb-2">Items ({result.items.length})</p>
+                                    <div className="space-y-1.5 max-h-32 overflow-y-auto">
+                                        {result.items.map((item, idx) => (
+                                            <div key={idx} className="flex justify-between items-center py-1.5 px-3 bg-slate-800/50 rounded-lg">
+                                                <span className="text-slate-300 text-sm truncate flex-1">{item.name}</span>
+                                                <span className="text-slate-400 text-sm font-medium ml-2">${item.price?.toFixed(2)}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Footer */}
+                        <div className="p-4 bg-slate-800/50 border-t border-slate-700">
+                            <button
+                                onClick={() => setShowResultModal(false)}
+                                className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 rounded-xl transition-all"
+                            >
+                                Done
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>
@@ -177,4 +268,3 @@ const SmartScan = ({ user }) => {
 };
 
 export default SmartScan;
-

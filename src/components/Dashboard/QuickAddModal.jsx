@@ -233,8 +233,35 @@ const QuickAddModal = ({ isOpen, onClose, user, accounts, selectedAccountId: def
                     {/* Amount & Note Group */}
                     <div className="space-y-4">
                         <div className="relative group">
-                            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-500 font-bold text-xl">
-                                {selectedCurrencyInfo?.symbol || '$'}
+                            <div className="absolute left-4 top-1/2 -translate-y-1/2">
+                                <button
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); setShowCurrencyPicker(!showCurrencyPicker); }}
+                                    className="text-emerald-500 font-bold text-xl hover:text-emerald-400 transition-colors flex items-center gap-1"
+                                >
+                                    {selectedCurrencyInfo?.symbol || '$'}
+                                    <ChevronDown className="w-3 h-3 opacity-50" />
+                                </button>
+                                {showCurrencyPicker && (
+                                    <div className="absolute top-full mt-2 left-0 w-44 rounded-xl shadow-2xl bg-slate-900 border border-slate-800 z-50 max-h-48 overflow-y-auto">
+                                        {CURRENCIES.map(c => (
+                                            <button
+                                                key={c.code}
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setCurrency(c.code);
+                                                    setShowCurrencyPicker(false);
+                                                }}
+                                                className={`w-full px-4 py-2 text-left flex items-center gap-3 text-sm hover:bg-slate-800 transition-colors ${currency === c.code ? 'bg-emerald-500/20 text-emerald-400' : 'text-slate-200'}`}
+                                            >
+                                                <span>{c.flag}</span>
+                                                <span>{c.code}</span>
+                                                <span className="text-slate-500">{c.symbol}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                             <input
                                 type="text"

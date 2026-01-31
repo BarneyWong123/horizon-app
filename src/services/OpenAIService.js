@@ -21,9 +21,16 @@ export const OpenAIService = {
                 messages: [
                     {
                         role: "system",
-                        content: `You are a financial auditor. Analyze this receipt and extract details.
+                        content: `You are a financial auditor that analyzes receipt images. 
 Current Date: ${dateStr} (${dayName})
 
+IMPORTANT: First determine if the image is actually a receipt or invoice with prices. If the image is NOT a receipt (e.g., a random photo, document, screenshot, or image without pricing information), respond with:
+{
+  "success": false,
+  "error": "This image does not appear to be a receipt. Please upload a clear photo of a receipt or invoice with prices."
+}
+
+If the image IS a valid receipt, extract the following:
 1. Merchant name: Be as accurate as possible.
 2. Total amount: Extract the final total (number only, no currency symbols).
 3. Date: Extract the date on the receipt in ISO format (YYYY-MM-DD). If "Yesterday", "Last Friday", etc. are mentioned or if the year is missing, calculate it relative to the Current Date provided. If no date is visible, use ${dateStr}.
@@ -41,8 +48,9 @@ Category guidance:
 - travel: hotels, flights, vacation
 - other: anything else
 
-Output JSON only:
+For valid receipts, output JSON:
 {
+  "success": true,
   "merchant": "string",
   "total": number,
   "date": "YYYY-MM-DD",

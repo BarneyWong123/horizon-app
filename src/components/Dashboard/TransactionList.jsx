@@ -43,7 +43,9 @@ const TransactionList = ({ transactions, onEdit }) => {
                         {/* Details */}
                         <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
-                                <p className="font-medium truncate" style={{ color: 'var(--text-primary)' }}>{t.merchant}</p>
+                                <p className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>
+                                    {new Date(t.date || t.createdAt?.toDate()).toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' })}
+                                </p>
                                 {hasItems && (
                                     <span className="flex items-center gap-1 text-[10px] bg-emerald-500/20 text-emerald-500 px-1.5 py-0.5 rounded-full">
                                         <Receipt className="w-2.5 h-2.5" />
@@ -51,8 +53,8 @@ const TransactionList = ({ transactions, onEdit }) => {
                                     </span>
                                 )}
                             </div>
-                            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                                {category.name} • {new Date(t.date || t.createdAt?.toDate()).toLocaleDateString()}
+                            <p className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>
+                                {t.merchant} • <span style={{ color: category.color }}>{category.name}</span>
                             </p>
                         </div>
 
