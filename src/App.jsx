@@ -60,9 +60,9 @@ const App = () => {
   return (
     <ToastProvider>
       <ThemeProvider>
-        <BrandingProvider user={user}>
+        <BrandingProvider user={user} key={user?.uid || 'guest'}>
           <CurrencyProvider>
-            <CategoryProvider user={user}>
+            <CategoryProvider user={user} key={user?.uid || 'guest'}>
               <Router>
                 <div className="min-h-screen" style={{ backgroundColor: 'var(--bg-page)', color: 'var(--text-primary)' }}>
                   {!user ? (

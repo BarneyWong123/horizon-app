@@ -14,14 +14,10 @@ export const useCategory = () => {
 
 export const CategoryProvider = ({ children, user }) => {
     const [categories, setCategories] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(!!user);
 
     useEffect(() => {
-        if (!user) {
-            setCategories([]);
-            setLoading(false);
-            return;
-        }
+        if (!user) return;
 
         const unsubscribe = FirebaseService.subscribeToCategories(user.uid, async (data) => {
             if (data.length === 0 && !localStorage.getItem(`categories_initialized_${user.uid}`)) {

@@ -64,7 +64,7 @@ const AdminPanel = ({ user }) => {
             const allUsers = await FirebaseService.getAllUsers();
             setUsers(allUsers);
             showToast('User list refreshed', 'success');
-        } catch (err) {
+        } catch {
             showToast('Failed to refresh', 'error');
         } finally {
             setLoading(false);

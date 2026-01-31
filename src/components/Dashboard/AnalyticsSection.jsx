@@ -7,8 +7,28 @@ import { useCurrency } from '../../context/CurrencyContext';
 import { useCategory } from '../../context/CategoryContext';
 import * as LucideIcons from 'lucide-react';
 
+const CustomTooltip = ({ active, payload, label, formatAmount }) => {
+    if (active && payload && payload.length) {
+        return (
+            <div
+                className="p-3 rounded-lg shadow-xl"
+                style={{
+                    backgroundColor: 'var(--bg-card)',
+                    border: '1px solid var(--border-default)'
+                }}
+            >
+                <p className="text-xs mb-1" style={{ color: 'var(--text-muted)' }}>{label}</p>
+                <p className="text-emerald-500 font-bold font-mono">
+                    {formatAmount(payload[0].value)}
+                </p>
+            </div>
+        );
+    }
+    return null;
+};
+
 const AnalyticsSection = ({ transactions }) => {
-    const { convert, formatAmount, selectedCurrency, getCurrencySymbol } = useCurrency();
+    const { convert, selectedCurrency, getCurrencySymbol } = useCurrency();
     const { categories, getCategoryById } = useCategory();
 
     // Helper to format already-converted amounts (no additional conversion)
@@ -82,27 +102,6 @@ const AnalyticsSection = ({ transactions }) => {
             .sort((a, b) => new Date(a.date) - new Date(b.date));
     }, [transactions, selectedCurrency, convert]);
 
-    // Graph Configuration
-    const CustomTooltip = ({ active, payload, label }) => {
-        if (active && payload && payload.length) {
-            return (
-                <div
-                    className="p-3 rounded-lg shadow-xl"
-                    style={{
-                        backgroundColor: 'var(--bg-card)',
-                        border: '1px solid var(--border-default)'
-                    }}
-                >
-                    <p className="text-xs mb-1" style={{ color: 'var(--text-muted)' }}>{label}</p>
-                    <p className="text-emerald-500 font-bold font-mono">
-                        {formatDirectAmount(payload[0].value)}
-                    </p>
-                </div>
-            );
-        }
-        return null;
-    };
-
     if (transactions.length === 0) return null;
 
     return (
@@ -141,7 +140,7 @@ const AnalyticsSection = ({ transactions }) => {
                                 axisLine={false}
                                 tickFormatter={(value) => `${value}`}
                             />
-                            <Tooltip content={<CustomTooltip />} />
+                            <Tooltip content={<CustomTooltip formatAmount={formatDirectAmount} />} />
                             <Area
                                 type="monotone"
                                 dataKey="amount"

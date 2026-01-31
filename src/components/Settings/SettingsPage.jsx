@@ -1,11 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import {
     User, Moon, Sun, Bell, Shield, Wallet, Trash2,
-    ChevronRight, LogOut, Settings2, LayoutDashboard, CreditCard, Lock, X,
-    Upload, Image as ImageIcon, RotateCcw
+    LogOut, Settings2, LayoutDashboard, CreditCard, Lock, X
 } from 'lucide-react';
-import { useBranding } from '../../context/BrandingContext';
-
 import { CURRENCIES } from '../../data/currencies';
 
 import { FirebaseService } from '../../services/FirebaseService';
@@ -17,17 +14,15 @@ import { useSubscription } from '../../context/SubscriptionContext';
 import { useNavigate } from 'react-router-dom';
 import CategorySettingsModal from './CategorySettingsModal';
 import { Check } from 'lucide-react';
+import SettingsSection from './SettingsSection';
+import SettingItem from './SettingItem';
 
 const SettingsPage = ({ user }) => {
-    const { tier, isPro } = useSubscription();
+    const { isPro } = useSubscription();
     const { theme, toggleTheme } = useTheme();
     const { selectedCurrency, setCurrency } = useCurrency();
     const { showToast } = useToast();
     const navigate = useNavigate();
-
-    // Branding State & Context
-    const { branding, uploadLogo, updateBranding, resetBranding } = useBranding();
-    const [uploading, setUploading] = useState(false);
 
     // Other settings state
     const [notifications, setNotifications] = useState(true);
@@ -92,51 +87,6 @@ const SettingsPage = ({ user }) => {
         }
     };
 
-    const Section = ({ title, children }) => (
-        <div className="mb-6">
-            <h3 className="font-bold text-xs uppercase tracking-wider mb-3 px-2" style={{ color: 'var(--text-muted)' }}>{title}</h3>
-            <div
-                className="rounded-xl overflow-hidden"
-                style={{
-                    backgroundColor: 'var(--bg-card)',
-                    border: '1px solid var(--border-default)'
-                }}
-            >
-                {children}
-            </div>
-        </div>
-    );
-
-    const SettingItem = ({ icon: Icon, label, value, onClick, type = 'arrow', color = 'text-slate-400' }) => (
-        <button
-            onClick={onClick}
-            className="w-full flex items-center justify-between p-4 transition-colors"
-            style={{ borderBottom: '1px solid var(--border-default)' }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-        >
-            <div className="flex items-center gap-3">
-                <div
-                    className={`w-8 h-8 rounded-lg flex items-center justify-center ${color}`}
-                    style={{ backgroundColor: 'var(--bg-input)' }}
-                >
-                    <Icon className="w-5 h-5" />
-                </div>
-                <span className="font-medium text-sm" style={{ color: 'var(--text-primary)' }}>{label}</span>
-            </div>
-
-            <div className="flex items-center gap-2">
-                {value && type !== 'toggle' && <span className="text-sm" style={{ color: 'var(--text-muted)' }}>{value}</span>}
-                {type === 'arrow' && <ChevronRight className="w-4 h-4" style={{ color: 'var(--text-muted)' }} />}
-                {type === 'toggle' && (
-                    <div className={`w-10 h-6 rounded-full transition-colors relative ${value ? 'bg-emerald-500' : ''}`} style={!value ? { backgroundColor: 'var(--bg-input)' } : {}}>
-                        <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform shadow-sm ${value ? 'translate-x-4' : ''}`} />
-                    </div>
-                )}
-            </div>
-        </button>
-    );
-
     return (
         <div className="max-w-2xl mx-auto pb-24 px-4 md:px-0 mt-6">
             <h1 className="text-2xl font-bold mb-6" style={{ color: 'var(--text-primary)' }}>Settings</h1>
@@ -154,7 +104,7 @@ const SettingsPage = ({ user }) => {
                 </div>
             </div>
 
-            <Section title="General">
+            <SettingsSection title="General">
                 <SettingItem
                     icon={User}
                     label="Personal Profile"
@@ -175,9 +125,9 @@ const SettingsPage = ({ user }) => {
                     onClick={() => setShowCategoryModal(true)}
                     color="text-purple-500"
                 />
-            </Section>
+            </SettingsSection>
 
-            <Section title="Quick Add Preferences">
+            <SettingsSection title="Quick Add Preferences">
                 <SettingItem
                     icon={CreditCard}
                     label="Default Account"
@@ -192,9 +142,9 @@ const SettingsPage = ({ user }) => {
                     onClick={() => setQuickAddCatsModalOpen(true)}
                     color="text-amber-500"
                 />
-            </Section>
+            </SettingsSection>
 
-            <Section title="Appearance">
+            <SettingsSection title="Appearance">
                 <SettingItem
                     icon={theme === 'dark' ? Moon : Sun}
                     label="Dark Mode"
@@ -203,9 +153,9 @@ const SettingsPage = ({ user }) => {
                     onClick={toggleTheme}
                     color="text-amber-500"
                 />
-            </Section>
+            </SettingsSection>
 
-            <Section title="Notifications & Security">
+            <SettingsSection title="Notifications & Security">
                 <SettingItem
                     icon={Bell}
                     label="Push Notifications"
@@ -228,9 +178,9 @@ const SettingsPage = ({ user }) => {
                     }}
                     color="text-emerald-500"
                 />
-            </Section>
+            </SettingsSection>
 
-            <Section title="Data">
+            <SettingsSection title="Data">
                 <button
                     onClick={handleLogout}
                     className="w-full flex items-center gap-3 p-4 transition-colors"
@@ -252,7 +202,7 @@ const SettingsPage = ({ user }) => {
                     </div>
                     <span className="font-medium text-sm">Delete Account & Data</span>
                 </button>
-            </Section>
+            </SettingsSection>
 
             {/* Modals */}
             <CategorySettingsModal
@@ -499,7 +449,7 @@ const SettingsPage = ({ user }) => {
                                         await FirebaseService.updateProfile(user.uid, profile);
                                         setProfileModalOpen(false);
                                         showToast('Profile updated!', 'success');
-                                    } catch (err) {
+                                    } catch {
                                         showToast('Failed to update profile', 'error');
                                     }
                                 }}

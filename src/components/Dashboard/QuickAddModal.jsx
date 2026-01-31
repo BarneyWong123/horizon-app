@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { X, Loader2, Delete, Wallet, ChevronDown } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { FirebaseService } from '../../services/FirebaseService';
@@ -9,7 +8,6 @@ import { useCategory } from '../../context/CategoryContext';
 import { CURRENCIES, getCurrencyByCode } from '../../data/currencies';
 
 const QuickAddModal = ({ isOpen, onClose, user, accounts, selectedAccountId: defaultAccountId }) => {
-    const navigate = useNavigate();
     const [amount, setAmount] = useState('0');
     const [note, setNote] = useState('');
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -121,10 +119,9 @@ const QuickAddModal = ({ isOpen, onClose, user, accounts, selectedAccountId: def
                 // Safe evaluation
                 // Replace visual X with * if needed (though we use * in state for simplicity)
                 const safeExpression = amount.replace(/[^0-9.+\-*/]/g, '');
-                // eslint-disable-next-line
                 const result = Function('"use strict";return (' + safeExpression + ')')();
                 setAmount(String(parseFloat(result.toFixed(2))));
-            } catch (e) {
+            } catch {
                 setAmount('Error');
             }
         } else if (['+', '-', '*', '/'].includes(value)) {
@@ -153,7 +150,7 @@ const QuickAddModal = ({ isOpen, onClose, user, accounts, selectedAccountId: def
                 const safeExpression = amount.replace(/[^0-9.+\-*/]/g, '');
                 const result = Function('"use strict";return (' + safeExpression + ')')();
                 finalAmount = String(result);
-            } catch (e) {
+            } catch {
                 showToast('Invalid calculation', 'error');
                 return;
             }
@@ -209,8 +206,6 @@ const QuickAddModal = ({ isOpen, onClose, user, accounts, selectedAccountId: def
         ['1', '2', '3', '='],
         ['0', '.'] // Last row custom layout
     ];
-
-    const selectedAccount = accountId ? accounts.find(a => a.id === accountId) : null;
 
     return (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/60 backdrop-blur-sm">

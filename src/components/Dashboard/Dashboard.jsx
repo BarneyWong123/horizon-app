@@ -118,8 +118,6 @@ const Dashboard = ({ user }) => {
         const dailyIncome = totalIncome / dayOfMonth;
         const dailyBurn = dailyRate - dailyIncome;
 
-        const monthlyRate = totalSpent;
-
         let displayAverage = dailyRate;
         if (averageType === 'monthly') {
             displayAverage = dailyRate * 30;

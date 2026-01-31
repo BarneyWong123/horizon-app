@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Clock, RefreshCcw } from 'lucide-react';
+import { RefreshCcw } from 'lucide-react';
 
-const RunwayCalculator = ({ transactions, burnRate }) => {
+const RunwayCalculator = ({ burnRate }) => {
     const [balance, setBalance] = useState(5000); // Default simulated balance
     const [isEditing, setIsEditing] = useState(false);
 
