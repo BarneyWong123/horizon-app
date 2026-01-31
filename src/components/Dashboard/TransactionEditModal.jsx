@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { X, Loader2, Trash2, ChevronDown, ChevronUp, Receipt } from 'lucide-react';
+import { X, Loader2, Trash2, ChevronDown, ChevronUp, Receipt, Calculator } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { CURRENCIES, getCurrencyByCode } from '../../data/currencies';
 import { FirebaseService } from '../../services/FirebaseService';
 import { useToast } from '../../context/ToastContext';
 import { useCategory } from '../../context/CategoryContext';
 import { useCurrency } from '../../context/CurrencyContext';
+import CalculatorInput from '../ManualEntry/CalculatorInput';
 
 const TransactionEditModal = ({ isOpen, onClose, user, transaction, accounts = [] }) => {
     const [amount, setAmount] = useState('');
@@ -21,6 +22,7 @@ const TransactionEditModal = ({ isOpen, onClose, user, transaction, accounts = [
     const { categories } = useCategory();
     const { convert } = useCurrency();
     const [accountId, setAccountId] = useState('');
+    const [showCalculator, setShowCalculator] = useState(false);
 
     // Sync state with transaction prop when it changes
     useEffect(() => {
@@ -170,18 +172,28 @@ const TransactionEditModal = ({ isOpen, onClose, user, transaction, accounts = [
                     <div className="flex gap-2">
                         <div className="flex-1">
                             <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Amount</label>
-                            <div className="relative mt-1">
-                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-xl">
-                                    {selectedCurrency?.symbol || '$'}
-                                </span>
-                                <input
-                                    type="number"
-                                    step="0.01"
-                                    placeholder="0.00"
-                                    className="w-full bg-slate-800 border border-slate-700 rounded-xl py-4 pl-10 pr-4 text-2xl font-bold text-white focus:ring-2 focus:ring-emerald-500 outline-none"
-                                    value={amount}
-                                    onChange={(e) => setAmount(e.target.value)}
-                                />
+                            <div className="relative mt-1 flex gap-2">
+                                <div className="flex-1 relative">
+                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-xl">
+                                        {selectedCurrency?.symbol || '$'}
+                                    </span>
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        placeholder="0.00"
+                                        className="w-full bg-slate-800 border border-slate-700 rounded-xl py-4 pl-10 pr-4 text-2xl font-bold text-white focus:ring-2 focus:ring-emerald-500 outline-none"
+                                        value={amount}
+                                        onChange={(e) => setAmount(e.target.value)}
+                                    />
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowCalculator(true)}
+                                    className="bg-slate-800 border border-slate-700 rounded-xl px-4 flex items-center justify-center hover:bg-slate-700 transition-colors"
+                                    title="Open Calculator"
+                                >
+                                    <Calculator className="w-5 h-5 text-emerald-500" />
+                                </button>
                             </div>
                         </div>
 
@@ -372,6 +384,18 @@ const TransactionEditModal = ({ isOpen, onClose, user, transaction, accounts = [
                     </div>
                 </form>
             </div>
+
+            {/* Calculator Modal */}
+            {showCalculator && (
+                <CalculatorInput
+                    initialValue={amount || '0'}
+                    onApply={(val) => {
+                        setAmount(val);
+                        setShowCalculator(false);
+                    }}
+                    onClose={() => setShowCalculator(false)}
+                />
+            )}
         </div>
     );
 };

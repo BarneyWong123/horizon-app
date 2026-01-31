@@ -17,6 +17,7 @@ const SmartScan = ({ user }) => {
     const [error, setError] = useState(null);
     const [showResultModal, setShowResultModal] = useState(false);
     const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+    const [showFailureModal, setShowFailureModal] = useState(false);
     const [note, setNote] = useState('');
     const [scanCount, setScanCount] = useState(0);
     const { showToast } = useToast();
@@ -71,24 +72,18 @@ const SmartScan = ({ user }) => {
             // Check if scan was successful
             if (analysis.success === false) {
                 setError(analysis.error || "This doesn't appear to be a receipt.");
-                showToast(analysis.error || 'Not a valid receipt', 'error');
+                setShowFailureModal(true);
                 setLoading(false);
                 return;
             }
 
-            // Save transaction
-            await FirebaseService.addTransaction(user.uid, {
-                ...analysis,
-                inputType: 'image'
-            });
-
+            // DON'T auto-save - show result modal for user confirmation
             setResult(analysis);
             setShowResultModal(true);
-            showToast('Receipt scanned successfully!', 'success');
         } catch (err) {
             clearInterval(progressInterval);
             setError("Failed to scan receipt. Please try again.");
-            showToast('Failed to scan receipt', 'error');
+            setShowFailureModal(true);
             console.error(err);
         } finally {
             setLoading(false);
@@ -282,15 +277,81 @@ const SmartScan = ({ user }) => {
                         {/* Footer */}
                         <div className="p-4 bg-slate-800/50 border-t border-slate-700">
                             <button
-                                onClick={() => setShowResultModal(false)}
+                                onClick={async () => {
+                                    try {
+                                        await FirebaseService.addTransaction(user.uid, {
+                                            ...result,
+                                            inputType: 'image'
+                                        });
+                                        showToast('Transaction saved!', 'success');
+                                        setShowResultModal(false);
+                                        setResult(null);
+                                    } catch (err) {
+                                        showToast('Failed to save transaction', 'error');
+                                    }
+                                }}
                                 className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 rounded-xl transition-all"
                             >
-                                Done
+                                Save Transaction
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setShowResultModal(false);
+                                    setResult(null);
+                                }}
+                                className="w-full text-slate-500 hover:text-slate-400 text-sm font-medium py-2 mt-2"
+                            >
+                                Discard
                             </button>
                         </div>
                     </div>
                 </div>
             )}
+
+            {/* Failure Modal */}
+            {showFailureModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="w-full max-w-sm bg-slate-900 border border-red-500/30 rounded-2xl shadow-2xl shadow-red-500/10 overflow-hidden animate-in zoom-in-95 duration-300">
+                        <div className="flex items-center justify-between p-4 bg-red-500/10 border-b border-red-500/20">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-red-500 rounded-full flex items-center justify-center">
+                                    <AlertTriangle className="w-6 h-6 text-white" />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-bold text-white">Scan Failed</h3>
+                                    <p className="text-xs text-red-400">Could not extract data</p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setShowFailureModal(false)}
+                                className="p-2 hover:bg-slate-800 rounded-full transition-colors"
+                            >
+                                <X className="w-5 h-5 text-slate-400" />
+                            </button>
+                        </div>
+                        <div className="p-5">
+                            <p className="text-slate-400 text-sm mb-4">
+                                {error || "This image doesn't appear to be a receipt or we couldn't read it clearly."}
+                            </p>
+                            <p className="text-slate-500 text-xs mb-4">Tips for better scans:</p>
+                            <ul className="text-slate-500 text-xs space-y-1 list-disc list-inside">
+                                <li>Ensure the receipt is flat and well-lit</li>
+                                <li>Capture the entire receipt in frame</li>
+                                <li>Avoid blurry or low-quality images</li>
+                            </ul>
+                        </div>
+                        <div className="p-4 bg-slate-800/50 border-t border-slate-700">
+                            <button
+                                onClick={() => setShowFailureModal(false)}
+                                className="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-xl transition-all"
+                            >
+                                Try Again
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Upgrade Modal */}
             {showUpgradeModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
@@ -306,7 +367,7 @@ const SmartScan = ({ user }) => {
                         </div>
                         <div className="space-y-3 pt-2">
                             <button
-                                onClick={() => navigate('/settings')} // We'll add a checkout link here
+                                onClick={() => navigate('/settings')}
                                 className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-emerald-500/20"
                             >
                                 Upgrade to Pro
@@ -326,3 +387,4 @@ const SmartScan = ({ user }) => {
 };
 
 export default SmartScan;
+
