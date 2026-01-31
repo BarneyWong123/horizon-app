@@ -14,10 +14,18 @@ const Login = () => {
         setLoading(true);
         setError(null);
         try {
+            let result;
             if (isLogin) {
-                await FirebaseService.login(email, password);
+                result = await FirebaseService.login(email, password);
             } else {
-                await FirebaseService.signUp(email, password);
+                result = await FirebaseService.signUp(email, password);
+            }
+            // Initialize user document for admin visibility
+            if (result.user) {
+                await FirebaseService.initializeUserDocument(result.user.uid, {
+                    email: result.user.email,
+                    displayName: result.user.displayName
+                });
             }
         } catch (err) {
             setError(err.message || "Authentication failed");
