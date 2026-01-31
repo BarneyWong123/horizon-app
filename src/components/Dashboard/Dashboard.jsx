@@ -40,8 +40,8 @@ const Dashboard = ({ user }) => {
     const [showScanOptions, setShowScanOptions] = useState(false);
 
     useEffect(() => {
-        // Initialize default account if none exists
-        FirebaseService.initializeDefaultAccount(user.uid);
+        // Initialize default account if none exists (also ensures user document exists)
+        FirebaseService.initializeDefaultAccount(user.uid, user.email, user.displayName);
 
         const unsubTransactions = FirebaseService.subscribeToTransactions(user.uid, (data) => {
             setTransactions(data);

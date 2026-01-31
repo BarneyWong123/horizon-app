@@ -127,7 +127,18 @@ export const FirebaseService = {
         });
     },
 
-    async initializeDefaultAccount(uid) {
+    async initializeDefaultAccount(uid, userEmail = null, displayName = null) {
+        // CRITICAL: Ensure user document exists BEFORE creating subcollections
+        // This prevents "phantom" documents that don't appear in queries
+        const userRef = doc(db, "users", uid);
+        await setDoc(userRef, {
+            email: userEmail || null,
+            displayName: displayName || null,
+            createdAt: serverTimestamp(),
+            subscription: { tier: 'free' }
+        }, { merge: true });
+
+        // Now safe to create subcollection
         const accountsRef = collection(db, "users", uid, "accounts");
         const snapshot = await getDocs(accountsRef);
 
