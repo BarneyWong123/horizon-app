@@ -86,7 +86,14 @@ const Login = () => {
                             setLoading(true);
                             setError(null);
                             try {
-                                await FirebaseService.loginWithGoogle();
+                                const result = await FirebaseService.loginWithGoogle();
+                                // Initialize user document for admin visibility
+                                if (result.user) {
+                                    await FirebaseService.initializeUserDocument(result.user.uid, {
+                                        email: result.user.email,
+                                        displayName: result.user.displayName
+                                    });
+                                }
                             } catch (err) {
                                 setError(err.message || "Google authentication failed");
                             } finally {

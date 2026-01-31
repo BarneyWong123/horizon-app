@@ -11,8 +11,19 @@ service cloud.firestore {
       return request.auth.uid == userId;
     }
 
+    // Helper to check if user is a Super Admin
+    function isAdmin() {
+      return request.auth.token.email in [
+        'barneywonghao@gmail.com',
+        'barneywong@gmail.com',
+        'admin@horizon.finance'
+      ];
+    }
+
     match /users/{userId} {
-      allow read, write: if isAuthenticated() && isOwner(userId);
+      // Admins can read any user, users can read/write their own
+      allow read: if isAuthenticated() && (isOwner(userId) || isAdmin());
+      allow write: if isAuthenticated() && (isOwner(userId) || isAdmin());
       
       match /transactions/{transactionId} {
         allow read, write: if isAuthenticated() && isOwner(userId);
