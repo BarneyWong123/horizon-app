@@ -192,14 +192,14 @@ const AnalyticsSection = ({ transactions }) => {
                     )}
                 </div>
                 {/* Legend */}
-                <div className="grid grid-cols-2 gap-2 mt-4 max-h-32 overflow-y-auto">
+                <div className="grid grid-cols-2 gap-x-2 gap-y-1 mt-4 max-h-32 overflow-y-auto">
                     {pieData.map(d => (
-                        <div key={d.id} className="flex items-center justify-between text-xs">
-                            <div className="flex items-center gap-1.5">
-                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: d.color }} />
-                                <span className="truncate max-w-[100px]" style={{ color: 'var(--text-secondary)' }}>{d.name}</span>
+                        <div key={d.id} className="flex items-center justify-between text-xs min-w-0">
+                            <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                                <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: d.color }} />
+                                <span className="truncate" style={{ color: 'var(--text-secondary)' }}>{d.name}</span>
                             </div>
-                            <span className="font-medium" style={{ color: 'var(--text-primary)' }}>{formatDirectAmount(d.value)}</span>
+                            <span className="font-medium flex-shrink-0 ml-1 text-right" style={{ color: 'var(--text-primary)' }}>{formatDirectAmount(d.value)}</span>
                         </div>
                     ))}
                 </div>

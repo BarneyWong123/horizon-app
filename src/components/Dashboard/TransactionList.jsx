@@ -59,8 +59,8 @@ const TransactionList = ({ transactions, onEdit }) => {
                         </div>
 
                         {/* Amount with Currency */}
-                        <div className="text-right">
-                            <p className="font-bold" style={{ color: 'var(--text-primary)' }}>
+                        <div className="text-right flex-shrink-0">
+                            <p className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>
                                 {currencyInfo?.symbol || '$'}{(t.total || 0).toFixed(2)}
                             </p>
                             {t.currency && t.currency !== 'USD' && (
