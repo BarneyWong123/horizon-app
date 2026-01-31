@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Camera, PenLine, X } from 'lucide-react';
+import { Plus, Camera, Keyboard, X } from 'lucide-react';
 
 const FloatingActionButton = ({ onQuickAdd, onScan }) => {
     const [isOpen, setIsOpen] = useState(false);
@@ -22,7 +22,7 @@ const FloatingActionButton = ({ onQuickAdd, onScan }) => {
                     className="w-12 h-12 bg-emerald-500 hover:bg-emerald-600 rounded-full flex items-center justify-center shadow-lg transition-all"
                     title="Manual Entry"
                 >
-                    <PenLine className="w-5 h-5 text-white" />
+                    <Keyboard className="w-5 h-5 text-white" />
                 </button>
             </div>
 

@@ -393,11 +393,11 @@ const Dashboard = ({ user }) => {
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
                 <div
                     onClick={() => setTimePeriod(prev => prev === 'year' ? 'month' : 'year')}
-                    className="card rounded-xl p-3 md:p-4 cursor-pointer transition-colors"
-                    style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-default)' }}
+                    className="card rounded-xl p-3 md:p-4 cursor-pointer transition-colors active:scale-95 duration-200"
+                    style={{ backgroundColor: 'var(--bg-card)' }}
                 >
                     <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Total Spent</span>
+                        <span className="text-[10px] uppercase tracking-wider font-bold" style={{ color: 'var(--text-muted)' }}>Total Spent</span>
                         <Wallet className="text-emerald-500 w-4 h-4" />
                     </div>
                     <p className="text-xl md:text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>{formatAmount(stats.totalSpent)}</p>
@@ -409,18 +409,18 @@ const Dashboard = ({ user }) => {
                 </div>
 
                 <div
-                    className="card rounded-xl p-3 md:p-4"
-                    style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-default)' }}
+                    onClick={() => setAverageType(prev => prev === 'daily' ? 'monthly' : 'daily')}
+                    className="card rounded-xl p-3 md:p-4 cursor-pointer transition-colors active:scale-95 duration-200"
+                    style={{ backgroundColor: 'var(--bg-card)' }}
                 >
                     <div className="flex items-center justify-between mb-2">
-                        <button
-                            onClick={() => setAverageType(prev => prev === 'daily' ? 'monthly' : 'daily')}
-                            className="text-xs font-medium flex items-center gap-1 transition-colors"
+                        <span
+                            className="text-[10px] uppercase tracking-wider font-bold flex items-center gap-1"
                             style={{ color: 'var(--text-muted)' }}
                         >
                             {averageType === 'daily' ? 'Daily Average' : 'Monthly Average'}
-                            <LucideIcons.ArrowLeftRight className="w-3 h-3" />
-                        </button>
+                            <LucideIcons.ArrowLeftRight className="w-3 h-3 opacity-50" />
+                        </span>
                         <TrendingDown className="text-amber-500 w-4 h-4" />
                     </div>
                     <p className="text-xl md:text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>{formatAmount(averageType === 'daily' ? stats.dailyRate : stats.displayAverage)}</p>
@@ -439,11 +439,11 @@ const Dashboard = ({ user }) => {
                             setSelectedAccountId(null);
                         }
                     }}
-                    className="card rounded-xl p-3 md:p-4 cursor-pointer transition-colors"
-                    style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-default)' }}
+                    className="card rounded-xl p-3 md:p-4 cursor-pointer transition-colors active:scale-95 duration-200"
+                    style={{ backgroundColor: 'var(--bg-card)' }}
                 >
                     <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Balance</span>
+                        <span className="text-[10px] uppercase tracking-wider font-bold" style={{ color: 'var(--text-muted)' }}>Balance</span>
                         <Wallet className="text-blue-500 w-4 h-4" />
                     </div>
                     <p className="text-xl md:text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>{formatAmount(stats.totalBalance)}</p>
@@ -455,10 +455,10 @@ const Dashboard = ({ user }) => {
 
                 <div
                     className="card rounded-xl p-3 md:p-4"
-                    style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-default)' }}
+                    style={{ backgroundColor: 'var(--bg-card)' }}
                 >
                     <div className="flex items-center justify-between mb-2 group relative">
-                        <span className="text-xs font-medium flex items-center gap-1 cursor-help" style={{ color: 'var(--text-muted)' }}>
+                        <span className="text-[10px] uppercase tracking-wider font-bold flex items-center gap-1 cursor-help" style={{ color: 'var(--text-muted)' }}>
                             Days Left
                             <LucideIcons.Info className="w-3 h-3" />
                         </span>
