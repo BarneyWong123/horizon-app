@@ -2,6 +2,7 @@
 // Add your admin email addresses here to grant full access
 
 export const ADMIN_EMAILS = [
+    'barneywonghao@gmail.com',
     'barneywong@gmail.com',
     'admin@horizon.finance',
     // Add more admin emails as needed
