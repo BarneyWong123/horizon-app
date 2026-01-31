@@ -12,6 +12,7 @@ import AccountManager from './components/Accounts/AccountManager';
 import ChatAuditor from './components/ChatAuditor/ChatAuditor';
 import Login from './components/Auth/Login';
 import SettingsPage from './components/Settings/SettingsPage';
+import AdminPanel from './components/Admin/AdminPanel';
 import { ThemeProvider } from './context/ThemeContext';
 import { BrandingProvider } from './context/BrandingContext';
 import { SubscriptionProvider } from './context/SubscriptionContext';
@@ -71,6 +72,7 @@ const App = () => {
                             <Route path="/accounts" element={<AccountManager user={user} />} />
                             <Route path="/assistant" element={<ChatAuditor user={user} />} />
                             <Route path="/settings" element={<SettingsPage user={user} />} />
+                            <Route path="/admin" element={<AdminPanel user={user} />} />
                             <Route path="*" element={<Navigate to="/" />} />
                           </Routes>
                         </main>

@@ -310,6 +310,47 @@ export const FirebaseService = {
                 callback(null);
             }
         });
+    },
+
+    // Admin Operations
+    async getAllUsers() {
+        const usersRef = collection(db, "users");
+        const snapshot = await getDocs(usersRef);
+        const users = [];
+
+        for (const userDoc of snapshot.docs) {
+            const userData = userDoc.data();
+            users.push({
+                uid: userDoc.id,
+                email: userData.email || null,
+                displayName: userData.displayName || null,
+                subscription: userData.subscription || { tier: 'free' },
+                createdAt: userData.createdAt || null,
+                profile: userData.profile || null
+            });
+        }
+
+        return users;
+    },
+
+    async updateUserTier(targetUid, tier) {
+        const userRef = doc(db, "users", targetUid);
+        return setDoc(userRef, {
+            subscription: {
+                tier: tier,
+                updatedAt: serverTimestamp()
+            }
+        }, { merge: true });
+    },
+
+    async initializeUserDocument(uid, userData) {
+        const userRef = doc(db, "users", uid);
+        return setDoc(userRef, {
+            email: userData.email || null,
+            displayName: userData.displayName || null,
+            createdAt: serverTimestamp(),
+            subscription: { tier: 'free' }
+        }, { merge: true });
     }
 };
 

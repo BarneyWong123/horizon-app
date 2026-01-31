@@ -12,7 +12,8 @@ import {
     ChevronDown,
     PanelLeftClose,
     PanelLeftOpen,
-    Crown
+    Crown,
+    Shield
 } from 'lucide-react';
 import { useBranding } from '../../context/BrandingContext';
 import { useSubscription } from '../../context/SubscriptionContext';
@@ -22,7 +23,7 @@ const Sidebar = ({ user, isCollapsed, onToggle }) => {
     const navigate = useNavigate();
     const location = useLocation();
     const { branding } = useBranding();
-    const { isPro, tier } = useSubscription();
+    const { isPro, tier, isAdmin } = useSubscription();
     const [showUserMenu, setShowUserMenu] = useState(false);
     const menuRef = useRef(null);
 
@@ -39,6 +40,7 @@ const Sidebar = ({ user, isCollapsed, onToggle }) => {
         { to: '/transactions', icon: Receipt, label: 'Transactions' },
         { to: '/accounts', icon: Wallet, label: 'Accounts' },
         { to: '/assistant', icon: MessageSquare, label: 'AI Assistant' },
+        ...(isAdmin ? [{ to: '/admin', icon: Shield, label: 'Admin Panel', isAdmin: true }] : []),
     ];
 
     // Mobile bottom nav items
