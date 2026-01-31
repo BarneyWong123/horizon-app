@@ -41,8 +41,8 @@ const SmartScan = ({ user }) => {
     }, [user]);
 
     const handleImageUpload = async (base64Image) => {
-        // Feature gate: Free users limited to 3 scans
-        if (!isPro && scanCount >= 3) {
+        // Feature gate: Free users limited to 50 scans
+        if (!isPro && scanCount >= 50) {
             setShowUpgradeModal(true);
             return;
         }

@@ -291,6 +291,25 @@ export const FirebaseService = {
                 callback(null);
             }
         });
+    },
+
+    async updateProfile(uid, profileData) {
+        const profileRef = doc(db, "users", uid, "settings", "profile");
+        return setDoc(profileRef, {
+            ...profileData,
+            updatedAt: serverTimestamp()
+        }, { merge: true });
+    },
+
+    subscribeToProfile(uid, callback) {
+        const profileRef = doc(db, "users", uid, "settings", "profile");
+        return onSnapshot(profileRef, (doc) => {
+            if (doc.exists()) {
+                callback(doc.data());
+            } else {
+                callback(null);
+            }
+        });
     }
 };
 

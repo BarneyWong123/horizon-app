@@ -8,6 +8,7 @@ import { Search, Filter, ArrowLeft, X, ArrowUp, ArrowDown, Calendar, Wallet, Dow
 import { useNavigate } from 'react-router-dom';
 import { CATEGORIES } from '../../data/categories';
 import { useCurrency } from '../../context/CurrencyContext';
+import { useSubscription } from '../../context/SubscriptionContext';
 
 const TransactionHistory = ({ user }) => {
     const navigate = useNavigate();
@@ -25,6 +26,7 @@ const TransactionHistory = ({ user }) => {
     const [editingTransaction, setEditingTransaction] = useState(null);
     const { categories } = useCategory();
     const { convert, formatAmount } = useCurrency();
+    const { isPro } = useSubscription();
     const [accounts, setAccounts] = useState([]);
 
     useEffect(() => {
@@ -101,6 +103,16 @@ const TransactionHistory = ({ user }) => {
         setSortField('date');
         setSortOrder('desc');
     };
+
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+    const hasOlderTransactions = !isPro && transactions.some(t => new Date(t.date) < sixMonthsAgo);
+
+    const visibleTransactions = filteredTransactions.filter(t => {
+        if (isPro) return true;
+        return new Date(t.date) >= sixMonthsAgo;
+    });
 
     return (
         <div className="space-y-4 px-4 md:px-0">
@@ -270,6 +282,27 @@ const TransactionHistory = ({ user }) => {
                 )}
             </div>
 
+            {/* Upgrade Banner for History Gate */}
+            {hasOlderTransactions && (
+                <div className="bg-gradient-to-r from-amber-500/10 to-amber-600/10 border border-amber-500/20 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+                            <ArrowUp className="w-5 h-5 text-amber-500" />
+                        </div>
+                        <div>
+                            <p className="text-sm font-bold text-white">Unlock Full History</p>
+                            <p className="text-xs text-slate-400">Transactions older than 6 months are hidden on the Free plan.</p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={() => navigate('/settings')}
+                        className="w-full sm:w-auto px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-xl transition-all shadow-lg shadow-amber-500/20"
+                    >
+                        Upgrade to Pro
+                    </button>
+                </div>
+            )}
+
             {/* Transaction List */}
             <div className="bg-slate-900/50 border border-slate-800 rounded-xl overflow-hidden">
                 {loading ? (
@@ -280,7 +313,7 @@ const TransactionHistory = ({ user }) => {
                     </div>
                 ) : (
                     <TransactionList
-                        transactions={filteredTransactions}
+                        transactions={visibleTransactions}
                         onEdit={(t) => setEditingTransaction(t)}
                     />
                 )}

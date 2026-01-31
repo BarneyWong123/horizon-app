@@ -37,9 +37,11 @@ const SettingsPage = ({ user }) => {
     const [currencyModalOpen, setCurrencyModalOpen] = useState(false);
     const [accountModalOpen, setAccountModalOpen] = useState(false);
     const [quickAddCatsModalOpen, setQuickAddCatsModalOpen] = useState(false);
+    const [profileModalOpen, setProfileModalOpen] = useState(false);
 
     // Preferences & Data
     const [preferences, setPreferences] = useState({});
+    const [profile, setProfile] = useState({ name: '', age: '', country: '' });
     const [accounts, setAccounts] = useState([]);
     const { categories } = useCategory();
 
@@ -47,9 +49,13 @@ const SettingsPage = ({ user }) => {
         if (!user) return;
         const unsubPrefs = FirebaseService.subscribeToPreferences(user.uid, setPreferences);
         const unsubAccs = FirebaseService.subscribeToAccounts(user.uid, setAccounts);
+        const unsubProfile = FirebaseService.subscribeToProfile(user.uid, (data) => {
+            if (data) setProfile(data);
+        });
         return () => {
             unsubPrefs();
             unsubAccs();
+            unsubProfile();
         };
     }, [user]);
 
@@ -141,7 +147,7 @@ const SettingsPage = ({ user }) => {
                     {user.email?.[0].toUpperCase()}
                 </div>
                 <div>
-                    <h2 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>{user.email}</h2>
+                    <h2 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>{profile.name || user.email?.split('@')[0]}</h2>
                     <p className={`text-sm font-bold ${isPro ? 'text-amber-500' : 'text-emerald-500'}`}>
                         {isPro ? 'Pro Plan' : 'Free Plan'}
                     </p>
@@ -149,6 +155,13 @@ const SettingsPage = ({ user }) => {
             </div>
 
             <Section title="General">
+                <SettingItem
+                    icon={User}
+                    label="Personal Profile"
+                    value={profile.name ? `${profile.name}${profile.age ? `, ${profile.age}` : ''}` : 'Set up profile'}
+                    onClick={() => setProfileModalOpen(true)}
+                    color="text-emerald-500"
+                />
                 <SettingItem
                     icon={Wallet}
                     label="Primary Currency"
@@ -425,6 +438,74 @@ const SettingsPage = ({ user }) => {
                                 className="w-full py-3 bg-emerald-500 text-white rounded-xl font-bold"
                             >
                                 Done
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Profile Modal */}
+            {profileModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                    <div
+                        className="rounded-2xl w-full max-w-md overflow-hidden flex flex-col"
+                        style={{
+                            backgroundColor: 'var(--bg-card)',
+                            border: '1px solid var(--border-default)'
+                        }}
+                    >
+                        <div className="flex items-center justify-between p-4 border-b" style={{ borderColor: 'var(--border-default)' }}>
+                            <h3 className="font-bold" style={{ color: 'var(--text-primary)' }}>Personal Profile</h3>
+                            <button onClick={() => setProfileModalOpen(false)} style={{ color: 'var(--text-muted)' }}>
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <div>
+                                <label className="block text-[10px] uppercase tracking-wider font-bold mb-1.5" style={{ color: 'var(--text-muted)' }}>Full Name</label>
+                                <input
+                                    type="text"
+                                    value={profile.name}
+                                    onChange={(e) => setProfile({ ...profile, name: e.target.value })}
+                                    className="w-full bg-slate-800/50 border border-slate-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all"
+                                    placeholder="Enter your name"
+                                />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-[10px] uppercase tracking-wider font-bold mb-1.5" style={{ color: 'var(--text-muted)' }}>Age</label>
+                                    <input
+                                        type="number"
+                                        value={profile.age}
+                                        onChange={(e) => setProfile({ ...profile, age: e.target.value })}
+                                        className="w-full bg-slate-800/50 border border-slate-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all"
+                                        placeholder="e.g. 25"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] uppercase tracking-wider font-bold mb-1.5" style={{ color: 'var(--text-muted)' }}>Country</label>
+                                    <input
+                                        type="text"
+                                        value={profile.country}
+                                        onChange={(e) => setProfile({ ...profile, country: e.target.value })}
+                                        className="w-full bg-slate-800/50 border border-slate-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all"
+                                        placeholder="e.g. Malaysia"
+                                    />
+                                </div>
+                            </div>
+                            <button
+                                onClick={async () => {
+                                    try {
+                                        await FirebaseService.updateProfile(user.uid, profile);
+                                        setProfileModalOpen(false);
+                                        showToast('Profile updated!', 'success');
+                                    } catch (err) {
+                                        showToast('Failed to update profile', 'error');
+                                    }
+                                }}
+                                className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-emerald-500/20 mt-2"
+                            >
+                                Save Profile
                             </button>
                         </div>
                     </div>
