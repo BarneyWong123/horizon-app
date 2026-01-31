@@ -6,19 +6,47 @@ import { FirebaseService } from '../../services/FirebaseService';
 import { CATEGORIES, getCategoryById } from '../../data/categories';
 import { useToast } from '../../context/ToastContext';
 import { useCurrency } from '../../context/CurrencyContext';
+import { useSubscription } from '../../context/SubscriptionContext';
 import ImageUploader from './ImageUploader';
 
 const SmartScan = ({ user }) => {
+    const { isPro } = useSubscription();
     const [loading, setLoading] = useState(false);
     const [progress, setProgress] = useState(0);
     const [result, setResult] = useState(null);
     const [error, setError] = useState(null);
     const [showResultModal, setShowResultModal] = useState(false);
+    const [showUpgradeModal, setShowUpgradeModal] = useState(false);
     const [note, setNote] = useState('');
+    const [scanCount, setScanCount] = useState(0);
     const { showToast } = useToast();
     const { formatAmount } = useCurrency();
 
+    // Fetch monthly scan count
+    React.useEffect(() => {
+        if (!user) return;
+        const startOfMonth = new Date();
+        startOfMonth.setDate(1);
+        startOfMonth.setHours(0, 0, 0, 0);
+
+        const unsubscribe = FirebaseService.subscribeToTransactions(user.uid, (data) => {
+            const monthlyScans = data.filter(t =>
+                t.inputType === 'image' &&
+                new Date(t.date || t.createdAt?.toDate()) >= startOfMonth
+            ).length;
+            setScanCount(monthlyScans);
+        });
+
+        return () => unsubscribe();
+    }, [user]);
+
     const handleImageUpload = async (base64Image) => {
+        // Feature gate: Free users limited to 3 scans
+        if (!isPro && scanCount >= 3) {
+            setShowUpgradeModal(true);
+            return;
+        }
+
         setLoading(true);
         setError(null);
         setResult(null);
@@ -258,6 +286,36 @@ const SmartScan = ({ user }) => {
                                 className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 rounded-xl transition-all"
                             >
                                 Done
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* Upgrade Modal */}
+            {showUpgradeModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl p-6 text-center space-y-4 animate-in zoom-in-95 duration-300">
+                        <div className="w-16 h-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center mx-auto">
+                            <LucideIcons.Lock className="w-8 h-8 text-emerald-500" />
+                        </div>
+                        <div>
+                            <h3 className="text-xl font-bold text-white mb-2">Monthly Limit Reached</h3>
+                            <p className="text-slate-400 text-sm">
+                                You've used all {scanCount} free scans this month. Upgrade to Pro for unlimited AI scans and advanced features.
+                            </p>
+                        </div>
+                        <div className="space-y-3 pt-2">
+                            <button
+                                onClick={() => navigate('/settings')} // We'll add a checkout link here
+                                className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-emerald-500/20"
+                            >
+                                Upgrade to Pro
+                            </button>
+                            <button
+                                onClick={() => setShowUpgradeModal(false)}
+                                className="w-full text-slate-500 hover:text-slate-400 text-sm font-medium py-1"
+                            >
+                                Not now
                             </button>
                         </div>
                     </div>

@@ -14,6 +14,7 @@ import Login from './components/Auth/Login';
 import SettingsPage from './components/Settings/SettingsPage';
 import { ThemeProvider } from './context/ThemeContext';
 import { BrandingProvider } from './context/BrandingContext';
+import { SubscriptionProvider } from './context/SubscriptionContext';
 
 const App = () => {
   const [user, setUser] = useState(null);
@@ -58,22 +59,23 @@ const App = () => {
                       <Route path="*" element={<Navigate to="/login" />} />
                     </Routes>
                   ) : (
-                    <div className="flex">
-                      <Sidebar user={user} isCollapsed={isSidebarCollapsed} onToggle={toggleSidebar} />
-                      {/* Main content: padding for mobile header/bottom nav, left margin for desktop sidebar */}
-                      <main className={`flex-1 min-h-screen pt-16 pb-20 md:pt-0 md:pb-0 transition-all duration-300 ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'} p-4 md:p-6 overflow-x-hidden`}>
-                        <Routes>
-                          <Route path="/" element={<Dashboard user={user} />} />
-                          <Route path="/scan" element={<SmartScan user={user} />} />
-                          <Route path="/transactions" element={<TransactionHistory user={user} />} />
-                          <Route path="/accounts" element={<AccountManager user={user} />} />
-                          <Route path="/accounts" element={<AccountManager user={user} />} />
-                          <Route path="/assistant" element={<ChatAuditor user={user} />} />
-                          <Route path="/settings" element={<SettingsPage user={user} />} />
-                          <Route path="*" element={<Navigate to="/" />} />
-                        </Routes>
-                      </main>
-                    </div>
+                    <SubscriptionProvider user={user}>
+                      <div className="flex">
+                        <Sidebar user={user} isCollapsed={isSidebarCollapsed} onToggle={toggleSidebar} />
+                        {/* Main content: padding for mobile header/bottom nav, left margin for desktop sidebar */}
+                        <main className={`flex-1 min-h-screen pt-16 pb-20 md:pt-0 md:pb-0 transition-all duration-300 ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'} p-4 md:p-6 overflow-x-hidden`}>
+                          <Routes>
+                            <Route path="/" element={<Dashboard user={user} />} />
+                            <Route path="/scan" element={<SmartScan user={user} />} />
+                            <Route path="/transactions" element={<TransactionHistory user={user} />} />
+                            <Route path="/accounts" element={<AccountManager user={user} />} />
+                            <Route path="/assistant" element={<ChatAuditor user={user} />} />
+                            <Route path="/settings" element={<SettingsPage user={user} />} />
+                            <Route path="*" element={<Navigate to="/" />} />
+                          </Routes>
+                        </main>
+                      </div>
+                    </SubscriptionProvider>
                   )}
                 </div>
               </Router>

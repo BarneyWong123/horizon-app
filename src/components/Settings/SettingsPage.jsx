@@ -13,11 +13,13 @@ import { useTheme } from '../../context/ThemeContext';
 import { useCurrency } from '../../context/CurrencyContext';
 import { useToast } from '../../context/ToastContext';
 import { useCategory } from '../../context/CategoryContext';
+import { useSubscription } from '../../context/SubscriptionContext';
 import { useNavigate } from 'react-router-dom';
 import CategorySettingsModal from './CategorySettingsModal';
 import { Check } from 'lucide-react';
 
 const SettingsPage = ({ user }) => {
+    const { tier, isPro } = useSubscription();
     const { theme, toggleTheme } = useTheme();
     const { selectedCurrency, setCurrency } = useCurrency();
     const { showToast } = useToast();
@@ -140,7 +142,9 @@ const SettingsPage = ({ user }) => {
                 </div>
                 <div>
                     <h2 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>{user.email}</h2>
-                    <p className="text-emerald-500 text-sm">Free Plan</p>
+                    <p className={`text-sm font-bold ${isPro ? 'text-amber-500' : 'text-emerald-500'}`}>
+                        {isPro ? 'Pro Plan' : 'Free Plan'}
+                    </p>
                 </div>
             </div>
 

@@ -280,6 +280,17 @@ export const FirebaseService = {
                 callback(null);
             }
         });
+    },
+
+    subscribeToUserSettings(uid, callback) {
+        const userRef = doc(db, "users", uid);
+        return onSnapshot(userRef, (doc) => {
+            if (doc.exists()) {
+                callback(doc.data());
+            } else {
+                callback(null);
+            }
+        });
     }
 };
 

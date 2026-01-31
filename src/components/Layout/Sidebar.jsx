@@ -11,15 +11,18 @@ import {
     User,
     ChevronDown,
     PanelLeftClose,
-    PanelLeftOpen
+    PanelLeftOpen,
+    Crown
 } from 'lucide-react';
 import { useBranding } from '../../context/BrandingContext';
+import { useSubscription } from '../../context/SubscriptionContext';
 import { FirebaseService } from '../../services/FirebaseService';
 
 const Sidebar = ({ user, isCollapsed, onToggle }) => {
     const navigate = useNavigate();
     const location = useLocation();
     const { branding } = useBranding();
+    const { isPro, tier } = useSubscription();
     const [showUserMenu, setShowUserMenu] = useState(false);
     const menuRef = useRef(null);
 
@@ -162,8 +165,13 @@ const Sidebar = ({ user, isCollapsed, onToggle }) => {
                             {!isCollapsed && (
                                 <>
                                     <div className="flex-1 overflow-hidden text-left">
-                                        <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{user.email?.split('@')[0]}</p>
-                                        <p className="text-[10px] truncate" style={{ color: 'var(--text-muted)' }}>Free Plan</p>
+                                        <div className="flex items-center gap-1.5 min-w-0">
+                                            <p className="text-sm font-medium truncate flex-1" style={{ color: 'var(--text-primary)' }}>{user.email?.split('@')[0]}</p>
+                                            {isPro && <Crown className="w-3 h-3 text-amber-400 flex-shrink-0" />}
+                                        </div>
+                                        <p className="text-[10px] truncate" style={{ color: isPro ? '#fbbf24' : 'var(--text-muted)' }}>
+                                            {isPro ? 'Pro Plan' : 'Free Plan'}
+                                        </p>
                                     </div>
                                     <ChevronUp className={`w-4 h-4 transition-transform ${showUserMenu ? 'rotate-180' : ''}`} style={{ color: 'var(--text-muted)' }} />
                                 </>
