@@ -31,8 +31,19 @@ const App = () => {
   };
 
   useEffect(() => {
-    const unsubscribe = FirebaseService.subscribeToAuthChanges((u) => {
+    const unsubscribe = FirebaseService.subscribeToAuthChanges(async (u) => {
       setUser(u);
+      // Ensure user document exists for admin visibility (fallback for existing sessions)
+      if (u) {
+        try {
+          await FirebaseService.initializeUserDocument(u.uid, {
+            email: u.email,
+            displayName: u.displayName
+          });
+        } catch (err) {
+          console.error('Failed to initialize user document:', err);
+        }
+      }
       setLoading(false);
     });
     return () => unsubscribe();
