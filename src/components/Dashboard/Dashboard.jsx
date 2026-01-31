@@ -18,7 +18,7 @@ import BudgetProgress from './BudgetProgress';
 
 const Dashboard = ({ user }) => {
     const navigate = useNavigate();
-    const { formatAmount, convert } = useCurrency();
+    const { formatAmount, convert, selectedCurrency } = useCurrency();
     const { categories } = useCategory();
     const { showToast } = useToast();
     const [transactions, setTransactions] = useState([]);
@@ -98,7 +98,8 @@ const Dashboard = ({ user }) => {
     const stats = useMemo(() => {
         const totalSpent = filteredTransactions.reduce((acc, curr) => {
             if (curr.type === 'income' || curr.category === 'income') return acc;
-            const amountInUSD = convert(curr.total || 0, curr.currency || 'USD', 'USD');
+            const txCurrency = curr.currency || selectedCurrency; // Default to selectedCurrency, not USD
+            const amountInUSD = txCurrency === 'USD' ? (curr.total || 0) : convert(curr.total || 0, txCurrency, 'USD');
             return acc + amountInUSD;
         }, 0);
 
@@ -106,7 +107,8 @@ const Dashboard = ({ user }) => {
 
         const totalIncome = filteredTransactions.reduce((acc, curr) => {
             if (curr.type === 'income' || curr.category === 'income') {
-                const amountInUSD = convert(curr.total || 0, curr.currency || 'USD', 'USD');
+                const txCurrency = curr.currency || selectedCurrency;
+                const amountInUSD = txCurrency === 'USD' ? (curr.total || 0) : convert(curr.total || 0, txCurrency, 'USD');
                 return acc + amountInUSD;
             }
             return acc;
@@ -138,7 +140,8 @@ const Dashboard = ({ user }) => {
             // Only count expenses for category breakdown
             if (t.type === 'income' || t.category === 'income') return acc;
             const cat = t.category || 'other';
-            const amountInUSD = convert(t.total || 0, t.currency || 'USD', 'USD');
+            const txCurrency = t.currency || selectedCurrency;
+            const amountInUSD = txCurrency === 'USD' ? (t.total || 0) : convert(t.total || 0, txCurrency, 'USD');
             acc[cat] = (acc[cat] || 0) + amountInUSD;
             return acc;
         }, {});
@@ -154,7 +157,7 @@ const Dashboard = ({ user }) => {
             daysUntilZero,
             categoryTotals
         };
-    }, [filteredTransactions, accounts, convert, averageType, selectedAccountId]);
+    }, [filteredTransactions, accounts, convert, averageType, selectedAccountId, selectedCurrency]);
 
     const selectedCategoryData = selectedCategory ? categories.find(c => c.id === selectedCategory) : null;
     const CategoryIcon = selectedCategoryData ? (LucideIcons[selectedCategoryData.icon] || LucideIcons.CircleDot) : null;

@@ -8,14 +8,28 @@ import { useCategory } from '../../context/CategoryContext';
 import * as LucideIcons from 'lucide-react';
 
 const AnalyticsSection = ({ transactions }) => {
-    const { convert, formatAmount, selectedCurrency } = useCurrency();
+    const { convert, formatAmount, selectedCurrency, getCurrencySymbol } = useCurrency();
     const { categories, getCategoryById } = useCategory();
+
+    // Helper to format already-converted amounts (no additional conversion)
+    const formatDirectAmount = (amount) => {
+        const symbol = getCurrencySymbol();
+        const formattedNumber = Math.abs(amount).toLocaleString(undefined, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+        return `${amount < 0 ? '-' : ''}${symbol}${formattedNumber}`;
+    };
 
     // 1. Prepare Pie Chart Data (Spending by Category)
     const pieData = useMemo(() => {
         const totals = transactions.reduce((acc, t) => {
             const catId = t.category || 'other';
-            const amount = convert(t.total || 0, t.currency || 'USD', selectedCurrency);
+            const txCurrency = t.currency || selectedCurrency; // Default to selectedCurrency if not set
+            // Only convert if currencies differ
+            const amount = txCurrency === selectedCurrency
+                ? (t.total || 0)
+                : convert(t.total || 0, txCurrency, selectedCurrency);
             // Only count expenses
             if (t.type === 'income') return acc;
 
@@ -49,7 +63,11 @@ const AnalyticsSection = ({ transactions }) => {
             if (t.type === 'income') return acc;
 
             const date = t.date?.split('T')[0];
-            const amount = convert(t.total || 0, t.currency || 'USD', selectedCurrency);
+            const txCurrency = t.currency || selectedCurrency; // Default to selectedCurrency if not set
+            // Only convert if currencies differ
+            const amount = txCurrency === selectedCurrency
+                ? (t.total || 0)
+                : convert(t.total || 0, txCurrency, selectedCurrency);
 
             acc[date] = (acc[date] || 0) + amount;
             return acc;
@@ -77,7 +95,7 @@ const AnalyticsSection = ({ transactions }) => {
                 >
                     <p className="text-xs mb-1" style={{ color: 'var(--text-muted)' }}>{label}</p>
                     <p className="text-emerald-500 font-bold font-mono">
-                        {formatAmount(payload[0].value)}
+                        {formatDirectAmount(payload[0].value)}
                     </p>
                 </div>
             );
@@ -163,7 +181,7 @@ const AnalyticsSection = ({ transactions }) => {
                                     ))}
                                 </Pie>
                                 <Tooltip
-                                    formatter={(value) => formatAmount(value)}
+                                    formatter={(value) => formatDirectAmount(value)}
                                     contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#f8fafc' }}
                                     itemStyle={{ color: '#f8fafc' }}
                                 />
@@ -181,7 +199,7 @@ const AnalyticsSection = ({ transactions }) => {
                                 <div className="w-2 h-2 rounded-full" style={{ backgroundColor: d.color }} />
                                 <span className="truncate max-w-[100px]" style={{ color: 'var(--text-secondary)' }}>{d.name}</span>
                             </div>
-                            <span className="font-medium" style={{ color: 'var(--text-primary)' }}>{formatAmount(d.value)}</span>
+                            <span className="font-medium" style={{ color: 'var(--text-primary)' }}>{formatDirectAmount(d.value)}</span>
                         </div>
                     ))}
                 </div>

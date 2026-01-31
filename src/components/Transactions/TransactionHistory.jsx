@@ -143,21 +143,29 @@ const TransactionHistory = ({ user }) => {
                     </div>
                     <button
                         onClick={() => setShowFilters(!showFilters)}
-                        className={`flex items-center gap-2 px-5 py-3.5 rounded-2xl font-medium transition-all ${showFilters || filterCategory || filterAccount || filterDateRange !== 'all'
-                            ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
-                            : 'bg-slate-800 text-slate-400 border border-slate-700 hover:border-slate-600'}`}
+                        className={`p-2.5 rounded-xl transition-all ${showFilters || filterCategory || filterAccount || filterDateRange !== 'all'
+                            ? 'bg-emerald-500 text-white'
+                            : 'bg-slate-800 text-slate-400 border border-slate-700 hover:text-white'}`}
+                        title="Filter"
                     >
                         <Filter className="w-4 h-4" />
-                        <span>Filters</span>
-                        {showFilters ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                     </button>
-                    {(searchQuery || filterCategory || filterAccount || filterDateRange !== 'all') && (
+                    <button
+                        onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
+                        className={`p-2.5 rounded-xl transition-all ${sortField !== 'date' || sortOrder !== 'desc'
+                            ? 'bg-blue-500 text-white'
+                            : 'bg-slate-800 text-slate-400 border border-slate-700 hover:text-white'}`}
+                        title={`Sort: ${sortField === 'date' ? 'Date' : 'Amount'} (${sortOrder === 'asc' ? 'Oldest/Lowest' : 'Newest/Highest'})`}
+                    >
+                        {sortOrder === 'desc' ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
+                    </button>
+                    {(searchQuery || filterCategory || filterAccount || filterDateRange !== 'all' || sortField !== 'date' || sortOrder !== 'desc') && (
                         <button
                             onClick={clearFilters}
-                            className="p-3.5 rounded-2xl bg-slate-800 text-slate-400 hover:text-white border border-slate-700 transition-all"
-                            title="Clear all filters"
+                            className="p-2.5 rounded-xl bg-slate-800 text-slate-400 hover:text-white border border-slate-700 transition-all"
+                            title="Clear all"
                         >
-                            <X className="w-5 h-5" />
+                            <X className="w-4 h-4" />
                         </button>
                     )}
                 </div>
