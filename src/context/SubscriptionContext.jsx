@@ -15,19 +15,10 @@ export const useSubscription = () => {
 export const SubscriptionProvider = ({ children, user }) => {
     const [tier, setTier] = useState('free'); // 'free' | 'pro'
     const [loading, setLoading] = useState(true);
-    const [isAdmin, setIsAdmin] = useState(false);
+    const isAdmin = user ? isAdminEmail(user.email) : false;
 
     useEffect(() => {
-        if (!user) {
-            setTier('free');
-            setIsAdmin(false);
-            setLoading(false);
-            return;
-        }
-
-        // Check if user is a Super Admin
-        const adminStatus = isAdminEmail(user.email);
-        setIsAdmin(adminStatus);
+        if (!user) return;
 
         // Subscribe to user settings/profile to get subscription status
         const unsubscribe = FirebaseService.subscribeToUserSettings(user.uid, (settings) => {

@@ -9,7 +9,6 @@ import {
     Settings,
     ChevronUp,
     User,
-    ChevronDown,
     PanelLeftClose,
     PanelLeftOpen,
     Crown,
@@ -23,7 +22,7 @@ const Sidebar = ({ user, isCollapsed, onToggle }) => {
     const navigate = useNavigate();
     const location = useLocation();
     const { branding } = useBranding();
-    const { isPro, tier, isAdmin } = useSubscription();
+    const { isPro, isAdmin } = useSubscription();
     const [showUserMenu, setShowUserMenu] = useState(false);
     const menuRef = useRef(null);
 

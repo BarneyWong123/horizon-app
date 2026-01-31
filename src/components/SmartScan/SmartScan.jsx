@@ -5,11 +5,12 @@ import { OpenAIService } from '../../services/OpenAIService';
 import { FirebaseService } from '../../services/FirebaseService';
 import { CATEGORIES, getCategoryById } from '../../data/categories';
 import { useToast } from '../../context/ToastContext';
-import { useCurrency } from '../../context/CurrencyContext';
 import { useSubscription } from '../../context/SubscriptionContext';
+import { useNavigate } from 'react-router-dom';
 import ImageUploader from './ImageUploader';
 
 const SmartScan = ({ user }) => {
+    const navigate = useNavigate();
     const { isPro } = useSubscription();
     const [loading, setLoading] = useState(false);
     const [progress, setProgress] = useState(0);
@@ -21,7 +22,6 @@ const SmartScan = ({ user }) => {
     const [note, setNote] = useState('');
     const [scanCount, setScanCount] = useState(0);
     const { showToast } = useToast();
-    const { formatAmount } = useCurrency();
 
     // Fetch monthly scan count
     React.useEffect(() => {
@@ -113,7 +113,7 @@ const SmartScan = ({ user }) => {
             setShowResultModal(true);
             setNote('');
             showToast('Expense added successfully!', 'success');
-        } catch (err) {
+        } catch {
             setError("Failed to parse note. Please try again.");
             showToast('Failed to parse note', 'error');
         } finally {
@@ -286,7 +286,7 @@ const SmartScan = ({ user }) => {
                                         showToast('Transaction saved!', 'success');
                                         setShowResultModal(false);
                                         setResult(null);
-                                    } catch (err) {
+                                    } catch {
                                         showToast('Failed to save transaction', 'error');
                                     }
                                 }}

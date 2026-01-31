@@ -4,7 +4,7 @@ import TransactionList from '../Dashboard/TransactionList';
 import TransactionEditModal from '../Dashboard/TransactionEditModal';
 import { generateCSV } from '../../utils/exportUtils';
 import { useCategory } from '../../context/CategoryContext';
-import { Search, Filter, ArrowLeft, X, ArrowUp, ArrowDown, Calendar, Wallet, Download } from 'lucide-react';
+import { Search, Filter, ArrowLeft, X, ArrowUp, ArrowDown, Calendar, Wallet, Download, ChevronDown, ChevronUp } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { CATEGORIES } from '../../data/categories';
 import { useCurrency } from '../../context/CurrencyContext';
@@ -25,7 +25,7 @@ const TransactionHistory = ({ user }) => {
     const [showFilters, setShowFilters] = useState(false);
     const [editingTransaction, setEditingTransaction] = useState(null);
     const { categories } = useCategory();
-    const { convert, formatAmount } = useCurrency();
+    const { convert } = useCurrency();
     const { isPro } = useSubscription();
     const [accounts, setAccounts] = useState([]);
 
