@@ -89,11 +89,32 @@ For valid receipts, output JSON:
      */
     async chatWithAuditor(messages, transactions) {
         try {
+            // Optimization: Filter and format transactions to reduce token usage
+            const simplifiedTransactions = Array.isArray(transactions)
+                ? transactions.map(t => {
+                    const clean = {
+                        date: t.date,
+                        merchant: t.merchant || t.description || 'Unknown',
+                        amount: t.amount,
+                        category: t.category,
+                        type: t.type,
+                        sentiment: t.sentiment
+                    };
+
+                    // Only include items if they exist and are relevant
+                    if (t.items && Array.isArray(t.items) && t.items.length > 0) {
+                        clean.items = t.items.map(i => `${i.name} ($${i.price})`).join(', ');
+                    }
+
+                    return clean;
+                })
+                : [];
+
             const systemPrompt = `You are the Horizon Chat Auditor. You have access to the user's transaction history below. 
       Use this data to answer their questions accurately. Be concise and professional.
       
       TRANSACTIONS:
-      ${JSON.stringify(transactions)}
+      ${JSON.stringify(simplifiedTransactions)}
       
       If asked about totals, dates, or specific spending habits, refer to the data above.`;
 
