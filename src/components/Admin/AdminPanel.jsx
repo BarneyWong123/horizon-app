@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Users, Crown, Shield, Search, ChevronDown, Loader2, RefreshCw } from 'lucide-react';
 import { FirebaseService } from '../../services/FirebaseService';
 import { useSubscription } from '../../context/SubscriptionContext';
@@ -9,8 +9,16 @@ const AdminPanel = ({ user }) => {
     const { isAdmin } = useSubscription();
     const { showToast } = useToast();
     const navigate = useNavigate();
+
+    // Data State
     const [users, setUsers] = useState([]);
+    const [lastDoc, setLastDoc] = useState(null);
+    const [hasMore, setHasMore] = useState(false);
+    const [stats, setStats] = useState({ total: 0, pro: 0, free: 0 });
+
+    // UI State
     const [loading, setLoading] = useState(true);
+    const [loadingMore, setLoadingMore] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [updatingUser, setUpdatingUser] = useState(null);
 
@@ -21,34 +29,81 @@ const AdminPanel = ({ user }) => {
         }
     }, [isAdmin, navigate]);
 
-    // Fetch all users
-    useEffect(() => {
-        const fetchUsers = async () => {
-            try {
-                const allUsers = await FirebaseService.getAllUsers();
-                setUsers(allUsers);
-            } catch (err) {
-                console.error('Failed to fetch users:', err);
-                showToast('Failed to load users', 'error');
-            } finally {
-                setLoading(false);
-            }
-        };
+    // Fetch initial data (stats + first page)
+    const fetchInitialData = useCallback(async () => {
+        setLoading(true);
+        try {
+            const [statsData, usersData] = await Promise.all([
+                FirebaseService.getUserStats(),
+                FirebaseService.getUsersPaginated()
+            ]);
 
-        if (isAdmin) {
-            fetchUsers();
+            setStats(statsData);
+            setUsers(usersData.users);
+            setLastDoc(usersData.lastDoc);
+            setHasMore(usersData.hasMore);
+        } catch (err) {
+            console.error('Failed to fetch users:', err);
+            showToast('Failed to load users', 'error');
+        } finally {
+            setLoading(false);
         }
-    }, [isAdmin]);
+    }, [showToast]);
+
+    useEffect(() => {
+        if (isAdmin) {
+            fetchInitialData();
+        }
+    }, [isAdmin, fetchInitialData]);
+
+    const loadMore = async () => {
+        if (!hasMore || loadingMore) return;
+        setLoadingMore(true);
+        try {
+            const nextBatch = await FirebaseService.getUsersPaginated(lastDoc);
+            setUsers(prev => [...prev, ...nextBatch.users]);
+            setLastDoc(nextBatch.lastDoc);
+            setHasMore(nextBatch.hasMore);
+        } catch (err) {
+            console.error('Failed to load more users:', err);
+            showToast('Failed to load more users', 'error');
+        } finally {
+            setLoadingMore(false);
+        }
+    };
 
     const handleTierChange = async (targetUid, newTier) => {
         setUpdatingUser(targetUid);
         try {
+            const currentUser = users.find(u => u.uid === targetUid);
+            const oldTier = currentUser?.subscription?.tier || 'free';
+
             await FirebaseService.updateUserTier(targetUid, newTier);
+
             setUsers(prev => prev.map(u =>
                 u.uid === targetUid
                     ? { ...u, subscription: { ...u.subscription, tier: newTier } }
                     : u
             ));
+
+            // Update stats locally
+            if (oldTier !== newTier) {
+                setStats(prev => {
+                    const isNowPro = newTier === 'pro';
+                    const wasPro = oldTier === 'pro';
+                    let { pro, free, total } = prev;
+
+                    if (isNowPro && !wasPro) {
+                        pro++;
+                        free--;
+                    } else if (!isNowPro && wasPro) {
+                        pro--;
+                        free++;
+                    }
+                    return { total, pro, free };
+                });
+            }
+
             showToast(`User tier updated to ${newTier}`, 'success');
         } catch (err) {
             console.error('Failed to update tier:', err);
@@ -59,16 +114,11 @@ const AdminPanel = ({ user }) => {
     };
 
     const refreshUsers = async () => {
-        setLoading(true);
-        try {
-            const allUsers = await FirebaseService.getAllUsers();
-            setUsers(allUsers);
-            showToast('User list refreshed', 'success');
-        } catch (err) {
-            showToast('Failed to refresh', 'error');
-        } finally {
-            setLoading(false);
-        }
+        setUsers([]);
+        setLastDoc(null);
+        setHasMore(false);
+        await fetchInitialData();
+        showToast('User list refreshed', 'success');
     };
 
     const filteredUsers = users.filter(u => {
@@ -111,18 +161,18 @@ const AdminPanel = ({ user }) => {
             <div className="grid grid-cols-3 gap-4">
                 <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4">
                     <p className="text-slate-400 text-xs uppercase tracking-wide font-bold">Total Users</p>
-                    <p className="text-2xl font-bold text-white mt-1">{users.length}</p>
+                    <p className="text-2xl font-bold text-white mt-1">{stats.total}</p>
                 </div>
                 <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4">
                     <p className="text-slate-400 text-xs uppercase tracking-wide font-bold">Pro Users</p>
                     <p className="text-2xl font-bold text-emerald-500 mt-1">
-                        {users.filter(u => u.subscription?.tier === 'pro').length}
+                        {stats.pro}
                     </p>
                 </div>
                 <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4">
                     <p className="text-slate-400 text-xs uppercase tracking-wide font-bold">Free Users</p>
                     <p className="text-2xl font-bold text-slate-300 mt-1">
-                        {users.filter(u => u.subscription?.tier !== 'pro').length}
+                        {stats.free}
                     </p>
                 </div>
             </div>
@@ -132,7 +182,7 @@ const AdminPanel = ({ user }) => {
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
                 <input
                     type="text"
-                    placeholder="Search by email, name, or UID..."
+                    placeholder="Search loaded users by email, name, or UID..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full bg-slate-900/50 border border-slate-800 rounded-xl py-3 pl-12 pr-4 text-white placeholder-slate-500 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
@@ -148,56 +198,80 @@ const AdminPanel = ({ user }) => {
                 ) : filteredUsers.length === 0 ? (
                     <div className="text-center py-12 text-slate-500">
                         <Users className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                        <p>No users found</p>
+                        <p>{searchQuery ? 'No matching users found' : 'No users found'}</p>
                     </div>
                 ) : (
-                    <div className="divide-y divide-slate-800">
-                        {filteredUsers.map((u) => (
-                            <div key={u.uid} className="flex items-center justify-between p-4 hover:bg-slate-800/50 transition-colors">
-                                <div className="flex items-center gap-3 min-w-0 flex-1">
-                                    <div className="w-10 h-10 bg-slate-700 rounded-full flex items-center justify-center flex-shrink-0">
-                                        <span className="text-white font-bold">
-                                            {(u.email || u.displayName || 'U')[0].toUpperCase()}
-                                        </span>
+                    <>
+                        <div className="divide-y divide-slate-800">
+                            {filteredUsers.map((u) => (
+                                <div key={u.uid} className="flex items-center justify-between p-4 hover:bg-slate-800/50 transition-colors">
+                                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                                        <div className="w-10 h-10 bg-slate-700 rounded-full flex items-center justify-center flex-shrink-0">
+                                            <span className="text-white font-bold">
+                                                {(u.email || u.displayName || 'U')[0].toUpperCase()}
+                                            </span>
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="text-white font-medium truncate">
+                                                {u.displayName || u.email || 'Unknown User'}
+                                            </p>
+                                            <p className="text-slate-500 text-xs truncate">
+                                                {u.email || u.uid}
+                                            </p>
+                                        </div>
                                     </div>
-                                    <div className="min-w-0">
-                                        <p className="text-white font-medium truncate">
-                                            {u.displayName || u.email || 'Unknown User'}
-                                        </p>
-                                        <p className="text-slate-500 text-xs truncate">
-                                            {u.email || u.uid}
-                                        </p>
-                                    </div>
-                                </div>
 
-                                {/* Tier Selector */}
-                                <div className="flex items-center gap-3">
-                                    {u.subscription?.tier === 'pro' && (
-                                        <Crown className="w-4 h-4 text-amber-500" />
-                                    )}
-                                    <div className="relative">
-                                        <select
-                                            value={u.subscription?.tier || 'free'}
-                                            onChange={(e) => handleTierChange(u.uid, e.target.value)}
-                                            disabled={updatingUser === u.uid}
-                                            className={`appearance-none bg-slate-800 border rounded-lg px-4 py-2 pr-8 text-sm font-medium cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-500 ${u.subscription?.tier === 'pro'
-                                                    ? 'border-amber-500/50 text-amber-400'
-                                                    : 'border-slate-700 text-slate-300'
-                                                }`}
-                                        >
-                                            <option value="free">Free</option>
-                                            <option value="pro">Pro</option>
-                                        </select>
-                                        {updatingUser === u.uid ? (
-                                            <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 animate-spin" />
-                                        ) : (
-                                            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                                    {/* Tier Selector */}
+                                    <div className="flex items-center gap-3">
+                                        {u.subscription?.tier === 'pro' && (
+                                            <Crown className="w-4 h-4 text-amber-500" />
                                         )}
+                                        <div className="relative">
+                                            <select
+                                                value={u.subscription?.tier || 'free'}
+                                                onChange={(e) => handleTierChange(u.uid, e.target.value)}
+                                                disabled={updatingUser === u.uid}
+                                                className={`appearance-none bg-slate-800 border rounded-lg px-4 py-2 pr-8 text-sm font-medium cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-500 ${u.subscription?.tier === 'pro'
+                                                        ? 'border-amber-500/50 text-amber-400'
+                                                        : 'border-slate-700 text-slate-300'
+                                                    }`}
+                                            >
+                                                <option value="free">Free</option>
+                                                <option value="pro">Pro</option>
+                                            </select>
+                                            {updatingUser === u.uid ? (
+                                                <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 animate-spin" />
+                                            ) : (
+                                                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
+                            ))}
+                        </div>
+
+                        {/* Load More Button */}
+                        {hasMore && !searchQuery && (
+                            <div className="p-4 border-t border-slate-800 flex justify-center">
+                                <button
+                                    onClick={loadMore}
+                                    disabled={loadingMore}
+                                    className="text-sm text-slate-400 hover:text-white transition-colors flex items-center gap-2"
+                                >
+                                    {loadingMore ? (
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                    ) : (
+                                        'Load More Users'
+                                    )}
+                                </button>
                             </div>
-                        ))}
-                    </div>
+                        )}
+                        {searchQuery && hasMore && (
+                            <div className="p-4 border-t border-slate-800 text-center text-xs text-slate-500">
+                                Search restricted to loaded users. Clear search to load more.
+                            </div>
+                        )}
+                    </>
                 )}
             </div>
 
