@@ -41,8 +41,10 @@ const BudgetProgress = ({ transactions }) => {
                     const limit = cat.budgetLimit;
                     const percent = Math.min((spent / limit) * 100, 100);
 
+                    // Compliance Neutral UI (MacroFactor pattern):
+                    // Use softer colors that inform without shaming
                     let progressColor = 'bg-emerald-500';
-                    if (percent > 100) progressColor = 'bg-red-500';
+                    if (percent > 100) progressColor = 'bg-purple-500'; // Over = purple (neutral)
                     else if (percent > 80) progressColor = 'bg-amber-500';
 
                     return (
@@ -50,7 +52,7 @@ const BudgetProgress = ({ transactions }) => {
                             <div className="flex justify-between text-xs mb-1">
                                 <span className="font-medium" style={{ color: 'var(--text-primary)' }}>{cat.name}</span>
                                 <span style={{ color: 'var(--text-muted)' }}>
-                                    <span className={percent > 100 ? 'text-red-500 font-bold' : ''} style={percent <= 100 ? { color: 'var(--text-primary)' } : {}}>
+                                    <span className={percent > 100 ? 'text-purple-400 font-medium' : ''} style={percent <= 100 ? { color: 'var(--text-primary)' } : {}}>
                                         {formatAmount(spent)}
                                     </span>
                                     {' / '}

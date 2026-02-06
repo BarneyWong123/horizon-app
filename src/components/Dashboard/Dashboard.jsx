@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FirebaseService } from '../../services/FirebaseService';
+import { StreakService } from '../../services/StreakService';
 import AnalyticsSection from './AnalyticsSection';
 import TransactionList from './TransactionList';
 import AccountCard from './AccountCard';
@@ -8,6 +9,8 @@ import FloatingActionButton from './FloatingActionButton';
 import QuickAddModal from './QuickAddModal';
 import TransactionEditModal from './TransactionEditModal';
 import CategorySettingsModal from '../Settings/CategorySettingsModal';
+import StreakBadge from './StreakBadge';
+import CashFlowForecast from './CashFlowForecast';
 import { Wallet, TrendingDown, Calendar, ChevronRight, Filter, ChevronDown, CalendarDays, X, Settings2 } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { useCategory } from '../../context/CategoryContext';
@@ -39,6 +42,9 @@ const Dashboard = ({ user }) => {
     const [customEndDate, setCustomEndDate] = useState('');
     const [showScanOptions, setShowScanOptions] = useState(false);
 
+    // Streak tracking (gamification)
+    const [streakData, setStreakData] = useState({ currentStreak: 0, longestStreak: 0 });
+
     useEffect(() => {
         // Initialize default account if none exists (also ensures user document exists)
         FirebaseService.initializeDefaultAccount(user.uid, user.email, user.displayName);
@@ -62,6 +68,19 @@ const Dashboard = ({ user }) => {
             unsubAccounts();
         };
     }, [user.uid, selectedAccountId]);
+
+    // Fetch streak data
+    useEffect(() => {
+        const fetchStreak = async () => {
+            try {
+                const streak = await StreakService.getStreak(user.uid);
+                setStreakData(streak);
+            } catch (err) {
+                console.error('Failed to fetch streak:', err);
+            }
+        };
+        fetchStreak();
+    }, [user.uid]);
 
     // Filter transactions by category and time period
     const filteredTransactions = useMemo(() => {
@@ -389,6 +408,18 @@ const Dashboard = ({ user }) => {
                 </div>
             )}
 
+            {/* Streak & Forecast Row (Market Research: Gamification + Forecasting) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <StreakBadge
+                    streak={streakData.currentStreak}
+                    longestStreak={streakData.longestStreak}
+                />
+                <CashFlowForecast
+                    transactions={transactions}
+                    accounts={accounts}
+                />
+            </div>
+
             {/* Stats Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
                 <div
@@ -467,7 +498,8 @@ const Dashboard = ({ user }) => {
                         </div>
                         <Calendar className="text-purple-500 w-4 h-4" />
                     </div>
-                    <p className={`text-xl md:text-2xl font-bold ${stats.daysUntilZero > 30 ? 'text-emerald-500' : stats.daysUntilZero > 14 ? 'text-amber-500' : 'text-red-500'}`}>
+                    {/* Compliance Neutral: Use purple instead of red */}
+                    <p className={`text-xl md:text-2xl font-bold ${stats.daysUntilZero > 30 ? 'text-emerald-500' : stats.daysUntilZero > 14 ? 'text-amber-500' : 'text-purple-400'}`}>
                         {stats.daysUntilZero === Infinity ? '∞' : stats.daysUntilZero}
                     </p>
                     <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>At current rate</p>

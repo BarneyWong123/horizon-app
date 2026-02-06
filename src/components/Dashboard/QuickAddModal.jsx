@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { X, Loader2, Delete, Wallet, ChevronDown } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { FirebaseService } from '../../services/FirebaseService';
+import { StreakService } from '../../services/StreakService';
 import { useToast } from '../../context/ToastContext';
 import { useCurrency } from '../../context/CurrencyContext';
 import { useCategory } from '../../context/CategoryContext';
@@ -188,11 +189,25 @@ const QuickAddModal = ({ isOpen, onClose, user, accounts, selectedAccountId: def
                 }
             }
 
+            // Record streak for gamification
+            try {
+                const streakResult = await StreakService.recordLog(user.uid);
+                if (streakResult.milestone) {
+                    showToast(`🔥 ${streakResult.milestone}-day streak! Keep it up!`, 'success');
+                } else if (streakResult.isNewDay) {
+                    showToast(`Expense added! 🔥 ${streakResult.streak}-day streak`, 'success');
+                } else {
+                    showToast('Expense added successfully!', 'success');
+                }
+            } catch (streakErr) {
+                console.error('Streak update failed:', streakErr);
+                showToast('Expense added successfully!', 'success');
+            }
+
             setAmount('0');
             setNote('');
             setDate(new Date().toISOString().split('T')[0]);
             setCategoryId('food');
-            showToast('Expense added successfully!', 'success');
             onClose();
         } catch (err) {
             console.error(err);
