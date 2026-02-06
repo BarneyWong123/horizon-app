@@ -18,7 +18,10 @@ import {
     serverTimestamp,
     where,
     getDocs,
-    setDoc
+    setDoc,
+    limit,
+    startAfter,
+    getCountFromServer
 } from "firebase/firestore";
 import {
     ref,
@@ -325,6 +328,7 @@ export const FirebaseService = {
 
     // Admin Operations
     async getAllUsers() {
+        // Deprecated: Use getUsersPaginated for better performance
         const usersRef = collection(db, "users");
         const snapshot = await getDocs(usersRef);
         const users = [];
@@ -342,6 +346,56 @@ export const FirebaseService = {
         }
 
         return users;
+    },
+
+    async getUsersPaginated(lastDoc = null, limitCount = 50) {
+        const usersRef = collection(db, "users");
+        let q = query(usersRef, orderBy("createdAt", "desc"), limit(limitCount));
+
+        if (lastDoc) {
+            q = query(usersRef, orderBy("createdAt", "desc"), startAfter(lastDoc), limit(limitCount));
+        }
+
+        const snapshot = await getDocs(q);
+        const users = [];
+
+        for (const userDoc of snapshot.docs) {
+            const userData = userDoc.data();
+            users.push({
+                uid: userDoc.id,
+                email: userData.email || null,
+                displayName: userData.displayName || null,
+                subscription: userData.subscription || { tier: 'free' },
+                createdAt: userData.createdAt || null,
+                profile: userData.profile || null,
+                _doc: userDoc // Internal reference for pagination
+            });
+        }
+
+        return {
+            users,
+            lastDoc: snapshot.docs[snapshot.docs.length - 1] || null,
+            hasMore: snapshot.docs.length === limitCount
+        };
+    },
+
+    async getUserStats() {
+        const usersRef = collection(db, "users");
+
+        // Parallel fetch for counts
+        const [totalSnapshot, proSnapshot] = await Promise.all([
+            getCountFromServer(usersRef),
+            getCountFromServer(query(usersRef, where("subscription.tier", "==", "pro")))
+        ]);
+
+        const total = totalSnapshot.data().count;
+        const pro = proSnapshot.data().count;
+
+        return {
+            total,
+            pro,
+            free: total - pro
+        };
     },
 
     async updateUserTier(targetUid, tier) {
