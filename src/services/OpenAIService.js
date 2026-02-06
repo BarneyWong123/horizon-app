@@ -113,31 +113,31 @@ For valid receipts, output JSON:
     },
 
     /**
-     * Get current exchange rates from OpenAI
+     * Get current exchange rates
+     * Uses external API instead of LLM for better performance and accuracy
      * Returns rates relative to USD as base currency
      */
     async getExchangeRates() {
         try {
-            const response = await openai.chat.completions.create({
-                model: "gpt-4o-mini",
-                messages: [
-                    {
-                        role: "system",
-                        content: `You are a financial data assistant. Provide current approximate exchange rates for major currencies relative to 1 USD. 
-Be as accurate as possible based on your knowledge of current market rates.
-Output JSON only with currency codes as keys and rates as values.
-Include these currencies: USD, EUR, GBP, MYR, THB, SGD, JPY, CNY, AUD, INR, PHP, IDR, VND, KRW, HKD.
-Example format: { "USD": 1, "EUR": 0.92, "GBP": 0.79, ... }`
-                    },
-                    {
-                        role: "user",
-                        content: "Provide current exchange rates for all listed currencies relative to 1 USD."
-                    }
-                ],
-                response_format: { type: "json_object" },
-            });
+            const response = await fetch("https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json");
+            if (!response.ok) {
+                throw new Error('Failed to fetch exchange rates');
+            }
+            const data = await response.json();
 
-            return JSON.parse(response.choices[0].message.content);
+            // The API returns rates in 'usd' object with lowercase keys
+            // We need to map them to uppercase keys
+            const rates = {};
+            const usdRates = data.usd;
+
+            for (const [currency, rate] of Object.entries(usdRates)) {
+                rates[currency.toUpperCase()] = rate;
+            }
+
+            // Ensure base currency is set
+            rates['USD'] = 1;
+
+            return rates;
         } catch (error) {
             console.error("Error fetching exchange rates:", error);
             // Return fallback rates if API fails
