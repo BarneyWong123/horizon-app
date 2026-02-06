@@ -27,10 +27,7 @@ const TransactionList = ({ transactions, onEdit }) => {
                     <div
                         key={t.id}
                         onClick={() => onEdit && onEdit(t)}
-                        className="flex items-center gap-3 p-4 transition-colors cursor-pointer"
-                        style={{ backgroundColor: 'transparent' }}
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                        className="flex items-center gap-3 p-4 transition-colors cursor-pointer hover:bg-[var(--bg-hover)]"
                     >
                         {/* Category Icon */}
                         <div
