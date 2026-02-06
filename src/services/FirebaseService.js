@@ -16,9 +16,9 @@ import {
     orderBy,
     onSnapshot,
     serverTimestamp,
-    where,
     getDocs,
-    setDoc
+    setDoc,
+    writeBatch
 } from "firebase/firestore";
 import {
     ref,
@@ -226,8 +226,21 @@ export const FirebaseService = {
     async clearChatHistory(uid) {
         const chatsRef = collection(db, "users", uid, "chats");
         const snapshot = await getDocs(chatsRef);
-        const batchPromises = snapshot.docs.map(doc => deleteDoc(doc.ref));
-        await Promise.all(batchPromises);
+
+        const BATCH_SIZE = 500;
+        const chunks = [];
+
+        for (let i = 0; i < snapshot.docs.length; i += BATCH_SIZE) {
+            chunks.push(snapshot.docs.slice(i, i + BATCH_SIZE));
+        }
+
+        for (const chunk of chunks) {
+            const batch = writeBatch(db);
+            chunk.forEach(doc => {
+                batch.delete(doc.ref);
+            });
+            await batch.commit();
+        }
     },
 
     async deleteUserData(uid) {
