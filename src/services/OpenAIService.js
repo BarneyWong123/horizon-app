@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { getLocalISODate } from '../utils/dateUtils';
 
 const openai = new OpenAI({
     apiKey: import.meta.env.VITE_OPENAI_API_KEY,
@@ -210,7 +211,7 @@ Output JSON only:
                     },
                     {
                         role: "user",
-                        content: `Parse this voice memo about an expense: "${transcript}"`
+                        content: `Parse this voice memo about an expense: "${transcript}". Today's date is ${getLocalISODate()}.`
                     }
                 ],
                 response_format: { type: "json_object" },

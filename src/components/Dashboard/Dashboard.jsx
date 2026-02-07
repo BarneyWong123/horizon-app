@@ -83,18 +83,11 @@ const Dashboard = ({ user }) => {
         };
     }, [user.uid, selectedAccountId]);
 
-    // Fetch streak data
+    // Subscribe to streak data for real-time updates
     useEffect(() => {
-        const fetchStreak = async () => {
-            try {
-                const streak = await StreakService.getStreak(user.uid);
-                setStreakData(streak);
-            } catch (err) {
-                console.error('Failed to fetch streak:', err);
-            }
-        };
-        fetchStreak();
-    }, [user.uid]);
+        if (!user?.uid) return;
+        return StreakService.subscribeToStreak(user.uid, setStreakData);
+    }, [user?.uid]);
 
     // Subscribe to dashboard preferences
     useEffect(() => {
