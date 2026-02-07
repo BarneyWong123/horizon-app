@@ -3,6 +3,7 @@ import { Camera, FileText, Loader2, CheckCircle2, X, AlertTriangle } from 'lucid
 import * as LucideIcons from 'lucide-react';
 import { OpenAIService } from '../../services/OpenAIService';
 import { FirebaseService } from '../../services/FirebaseService';
+import { StreakService } from '../../services/StreakService';
 import { CATEGORIES, getCategoryById } from '../../data/categories';
 import { useToast } from '../../context/ToastContext';
 import { useCurrency } from '../../context/CurrencyContext';
@@ -109,6 +110,8 @@ const SmartScan = ({ user }) => {
                 inputType: 'text',
                 rawInput: note
             });
+            // Record streak
+            await StreakService.recordLog(user.uid);
             setResult(parsed);
             setShowResultModal(true);
             setNote('');
@@ -283,6 +286,8 @@ const SmartScan = ({ user }) => {
                                             ...result,
                                             inputType: 'image'
                                         });
+                                        // Record streak
+                                        await StreakService.recordLog(user.uid);
                                         showToast('Transaction saved!', 'success');
                                         setShowResultModal(false);
                                         setResult(null);

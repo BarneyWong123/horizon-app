@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { TrendingUp, TrendingDown, ArrowRight, AlertTriangle } from 'lucide-react';
+import { useCurrency } from '../../context/CurrencyContext';
 
 const CashFlowForecast = ({ transactions, accounts, daysToForecast = 30 }) => {
     const forecast = useMemo(() => {
@@ -65,6 +66,8 @@ const CashFlowForecast = ({ transactions, accounts, daysToForecast = 30 }) => {
         };
     }, [transactions, accounts, daysToForecast]);
 
+    const { formatAmount, getCurrencySymbol } = useCurrency();
+
     if (!forecast) {
         return (
             <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-4">
@@ -77,14 +80,7 @@ const CashFlowForecast = ({ transactions, accounts, daysToForecast = 30 }) => {
         );
     }
 
-    const formatCurrency = (amount) => {
-        return new Intl.NumberFormat('en-US', {
-            style: 'currency',
-            currency: 'USD',
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0
-        }).format(amount);
-    };
+    // Use user's primary currency for display
 
     // Find min and max for scaling the wave
     const minBalance = Math.min(...forecast.forecastPoints.map(p => p.balance));
@@ -107,7 +103,7 @@ const CashFlowForecast = ({ transactions, accounts, daysToForecast = 30 }) => {
                     ? 'bg-emerald-500/20 text-emerald-400'
                     : 'bg-amber-500/20 text-amber-400'
                     }`}>
-                    {forecast.trend === 'positive' ? '+' : ''}{formatCurrency(forecast.dailyNetRate)}/day
+                    {forecast.trend === 'positive' ? '+' : ''}{formatAmount(forecast.dailyNetRate)}/day
                 </span>
             </div>
 
@@ -170,13 +166,13 @@ const CashFlowForecast = ({ transactions, accounts, daysToForecast = 30 }) => {
             <div className="flex items-center justify-between">
                 <div>
                     <p className="text-slate-400 text-xs uppercase tracking-wide">Now</p>
-                    <p className="text-white font-bold">{formatCurrency(forecast.currentBalance)}</p>
+                    <p className="text-white font-bold">{formatAmount(forecast.currentBalance)}</p>
                 </div>
                 <ArrowRight className="w-4 h-4 text-slate-600" />
                 <div className="text-right">
                     <p className="text-slate-400 text-xs uppercase tracking-wide">In 30 days</p>
                     <p className={`font-bold ${forecast.projectedBalance >= 0 ? 'text-white' : 'text-amber-400'}`}>
-                        {formatCurrency(forecast.projectedBalance)}
+                        {formatAmount(forecast.projectedBalance)}
                     </p>
                 </div>
             </div>

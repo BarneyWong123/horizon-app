@@ -9,9 +9,10 @@ import FloatingActionButton from './FloatingActionButton';
 import QuickAddModal from './QuickAddModal';
 import TransactionEditModal from './TransactionEditModal';
 import CategorySettingsModal from '../Settings/CategorySettingsModal';
+import DashboardPreferences from './DashboardPreferences';
 import StreakBadge from './StreakBadge';
 import CashFlowForecast from './CashFlowForecast';
-import { Wallet, TrendingDown, Calendar, ChevronRight, Filter, ChevronDown, CalendarDays, X, Settings2 } from 'lucide-react';
+import { Wallet, TrendingDown, Calendar, ChevronRight, Filter, ChevronDown, CalendarDays, X, Settings2, LayoutGrid } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { useCategory } from '../../context/CategoryContext';
 import { useToast } from '../../context/ToastContext';
@@ -44,6 +45,10 @@ const Dashboard = ({ user }) => {
 
     // Streak tracking (gamification)
     const [streakData, setStreakData] = useState({ currentStreak: 0, longestStreak: 0 });
+
+    // Dashboard customization
+    const [showDashboardPrefs, setShowDashboardPrefs] = useState(false);
+    const [dashboardPrefs, setDashboardPrefs] = useState(null);
 
     useEffect(() => {
         // Initialize default account if none exists (also ensures user document exists)
@@ -81,6 +86,20 @@ const Dashboard = ({ user }) => {
         };
         fetchStreak();
     }, [user.uid]);
+
+    // Subscribe to dashboard preferences
+    useEffect(() => {
+        const unsub = FirebaseService.subscribeToPreferences(user.uid, (prefs) => {
+            setDashboardPrefs(prefs);
+        });
+        return () => unsub?.();
+    }, [user.uid]);
+
+    // Helper to check if widget should be shown
+    const shouldShowWidget = (widgetId) => {
+        if (!dashboardPrefs?.hiddenWidgets) return true;
+        return !dashboardPrefs.hiddenWidgets.includes(widgetId);
+    };
 
     // Filter transactions by category and time period
     const filteredTransactions = useMemo(() => {
@@ -228,9 +247,18 @@ const Dashboard = ({ user }) => {
     return (
         <div className="space-y-4 md:space-y-6 pb-24 px-4 md:px-0">
             {/* Header */}
-            <div>
-                <h1 className="text-xl md:text-2xl font-bold mb-1" style={{ color: 'var(--text-primary)' }}>Dashboard</h1>
-                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Your financial overview</p>
+            <div className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-xl md:text-2xl font-bold mb-1" style={{ color: 'var(--text-primary)' }}>Dashboard</h1>
+                    <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Your financial overview</p>
+                </div>
+                <button
+                    onClick={() => setShowDashboardPrefs(true)}
+                    className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+                    title="Customize Dashboard"
+                >
+                    <LayoutGrid className="w-5 h-5" />
+                </button>
             </div>
 
             {/* Filters Row */}
@@ -643,6 +671,13 @@ const Dashboard = ({ user }) => {
             <CategorySettingsModal
                 isOpen={showCategorySettings}
                 onClose={() => setShowCategorySettings(false)}
+            />
+
+            {/* Dashboard Preferences Modal */}
+            <DashboardPreferences
+                isOpen={showDashboardPrefs}
+                onClose={() => setShowDashboardPrefs(false)}
+                user={user}
             />
         </div>
     );

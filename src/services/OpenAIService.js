@@ -159,5 +159,67 @@ Example format: { "USD": 1, "EUR": 0.92, "GBP": 0.79, ... }`
                 HKD: 7.82
             };
         }
+    },
+
+    /**
+     * Transcribe audio using OpenAI Whisper
+     * @param {File|Blob} audioFile - Audio file to transcribe
+     * @returns {Promise<string>} - Transcribed text
+     */
+    async transcribeAudio(audioFile) {
+        try {
+            const response = await openai.audio.transcriptions.create({
+                file: audioFile,
+                model: "whisper-1",
+            });
+            return response.text;
+        } catch (error) {
+            console.error("Error transcribing audio:", error);
+            throw error;
+        }
+    },
+
+    /**
+     * Parse a voice transcription into transaction data
+     * @param {string} transcript - The transcribed text
+     * @returns {Promise<Object>} - Parsed transaction object
+     */
+    async parseVoiceTransaction(transcript) {
+        try {
+            const response = await openai.chat.completions.create({
+                model: "gpt-4o-mini",
+                messages: [
+                    {
+                        role: "system",
+                        content: `You are a financial assistant that parses voice memos about expenses into structured data.
+Extract the following from the user's voice memo:
+1. merchant: The store or vendor name
+2. total: The amount spent (number only)
+3. date: The date in ISO format (YYYY-MM-DD). If not mentioned, use today's date.
+4. category: Choose from [food, transport, shopping, bills, entertainment, health, travel, income, transfer, other]
+5. sentiment: 'Survival' (essentials), 'Investment' (education/health), or 'Regret' (impulse/unnecessary)
+
+Output JSON only:
+{
+  "merchant": "string",
+  "total": number,
+  "date": "YYYY-MM-DD",
+  "category": "food|transport|shopping|bills|entertainment|health|travel|income|transfer|other",
+  "sentiment": "Survival|Investment|Regret"
+}`
+                    },
+                    {
+                        role: "user",
+                        content: `Parse this voice memo about an expense: "${transcript}"`
+                    }
+                ],
+                response_format: { type: "json_object" },
+            });
+
+            return JSON.parse(response.choices[0].message.content);
+        } catch (error) {
+            console.error("Error parsing voice transaction:", error);
+            throw error;
+        }
     }
 };
