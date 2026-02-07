@@ -1,7 +1,10 @@
 import React, { useMemo } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
+import { useCurrency } from '../../context/CurrencyContext';
 
 const BurnVelocityChart = ({ transactions }) => {
+    const { convert, selectedCurrency, getCurrencySymbol } = useCurrency();
+
     const data = useMemo(() => {
         const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
         const spendingMap = {};
@@ -9,7 +12,12 @@ const BurnVelocityChart = ({ transactions }) => {
         transactions.forEach(t => {
             const date = new Date(t.date || t.createdAt?.toDate());
             const day = date.getDate();
-            spendingMap[day] = (spendingMap[day] || 0) + (t.total || 0);
+            const txCurrency = t.currency || selectedCurrency;
+            const amount = txCurrency === selectedCurrency
+                ? (t.total || 0)
+                : convert(t.total || 0, txCurrency, selectedCurrency);
+
+            spendingMap[day] = (spendingMap[day] || 0) + amount;
         });
 
         let cumulative = 0;
@@ -18,10 +26,10 @@ const BurnVelocityChart = ({ transactions }) => {
             cumulative += (spendingMap[day] || 0);
             return {
                 day,
-                amount: cumulative
+                amount: parseFloat(cumulative.toFixed(2))
             };
         });
-    }, [transactions]);
+    }, [transactions, selectedCurrency, convert]);
 
     const today = new Date().getDate();
 
@@ -43,11 +51,11 @@ const BurnVelocityChart = ({ transactions }) => {
                     axisLine={false}
                 />
                 <YAxis
-                    stroke="#475569"
-                    tick={{ fontSize: 12 }}
+                    stroke="var(--text-muted)"
+                    fontSize={10}
                     tickLine={false}
                     axisLine={false}
-                    tickFormatter={(value) => `$${value}`}
+                    tickFormatter={(value) => `${getCurrencySymbol()}${value}`}
                 />
                 <Tooltip
                     contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '12px', color: '#f1f5f9' }}

@@ -154,8 +154,28 @@ const Dashboard = ({ user }) => {
             return acc;
         }, 0);
 
-        const dailyRate = totalSpent / dayOfMonth;
-        const dailyIncome = totalIncome / dayOfMonth;
+        // Period-aware daily rate calculation
+        let daysInPeriod = 1;
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+        if (timePeriod === 'month') {
+            daysInPeriod = now.getDate();
+        } else if (timePeriod === 'year') {
+            const startOfYear = new Date(now.getFullYear(), 0, 1);
+            daysInPeriod = Math.max(1, Math.floor((today - startOfYear) / (1000 * 60 * 60 * 24)) + 1);
+        } else if (timePeriod === 'week') {
+            const dayOfWeek = now.getDay() || 7; // 1-7 (Mon-Sun)
+            daysInPeriod = dayOfWeek;
+        } else if (timePeriod === 'all' && filteredTransactions.length > 0) {
+            const firstTxDate = new Date(Math.min(...filteredTransactions.map(t => new Date(t.date || t.createdAt?.toDate()))));
+            daysInPeriod = Math.max(1, Math.floor((today - firstTxDate) / (1000 * 60 * 60 * 24)) + 1);
+        } else {
+            daysInPeriod = now.getDate(); // Default to day of month
+        }
+
+        const dailyRate = totalSpent / daysInPeriod;
+        const dailyIncome = totalIncome / daysInPeriod;
         const dailyBurn = dailyRate - dailyIncome;
 
         const monthlyRate = totalSpent;
@@ -457,6 +477,7 @@ const Dashboard = ({ user }) => {
                                     <CashFlowForecast
                                         transactions={transactions}
                                         accounts={accounts}
+                                        stats={stats}
                                     />
                                 </div>
                             );

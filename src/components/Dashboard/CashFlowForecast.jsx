@@ -2,71 +2,74 @@ import React, { useMemo } from 'react';
 import { TrendingUp, TrendingDown, ArrowRight, AlertTriangle } from 'lucide-react';
 import { useCurrency } from '../../context/CurrencyContext';
 
-const CashFlowForecast = ({ transactions, accounts, daysToForecast = 30 }) => {
+const CashFlowForecast = ({ transactions, accounts, stats, daysToForecast = 30 }) => {
+    const { convert, formatAmount, selectedCurrency } = useCurrency();
+
     const forecast = useMemo(() => {
-        if (!transactions || transactions.length < 7) {
-            return null; // Need at least a week of data
+        if (!transactions || transactions.length < 5) {
+            return null;
         }
 
-        // Calculate current total balance (ensure valid number)
-        const currentBalance = accounts?.reduce((sum, acc) => sum + (acc.balance || 0), 0) || 0;
+        // Use dashboard stats if provided for consistency, otherwise calculate
+        const currentBalanceUSD = stats?.totalBalance !== undefined
+            ? stats.totalBalance
+            : accounts?.reduce((sum, acc) => {
+                const acctCurrency = acc.currency || selectedCurrency;
+                return sum + (acctCurrency === 'USD' ? (acc.balance || 0) : convert(acc.balance || 0, acctCurrency, 'USD'));
+            }, 0) || 0;
 
-        // Analyze spending patterns from last 30 days
-        const now = new Date();
-        const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        const dailyNetRateUSD = stats?.dailyBurn !== undefined
+            ? -stats.dailyBurn // dailyBurn in dashboard is expense - income, so net is negative burn
+            : (() => {
+                const now = new Date();
+                const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+                const recent = transactions.filter(t => {
+                    const txDate = t.date?.toDate ? t.date.toDate() : new Date(t.date);
+                    return txDate >= thirtyDaysAgo;
+                });
 
-        const recentTransactions = transactions.filter(t => {
-            const txDate = t.date?.toDate ? t.date.toDate() : new Date(t.date);
-            return txDate >= thirtyDaysAgo;
-        });
+                const expenses = recent.filter(t => t.type === 'expense' || t.category !== 'income')
+                    .reduce((sum, t) => {
+                        const txCurrency = t.currency || 'USD';
+                        return sum + (txCurrency === 'USD' ? (t.total || 0) : convert(t.total || 0, txCurrency, 'USD'));
+                    }, 0);
 
-        // Calculate daily averages (use 'total' field, not 'amount')
-        const totalExpenses = recentTransactions
-            .filter(t => t.type === 'expense')
-            .reduce((sum, t) => sum + Math.abs(t.total || 0), 0);
+                const income = recent.filter(t => t.type === 'income' || t.category === 'income')
+                    .reduce((sum, t) => {
+                        const txCurrency = t.currency || 'USD';
+                        return sum + (txCurrency === 'USD' ? (t.total || 0) : convert(t.total || 0, txCurrency, 'USD'));
+                    }, 0);
 
-        const totalIncome = recentTransactions
-            .filter(t => t.type === 'income')
-            .reduce((sum, t) => sum + (t.total || 0), 0);
+                const days = Math.max(1, new Date().getDate());
+                return (income - expenses) / days;
+            })();
 
-        const daysOfData = Math.min(30, Math.max(7, recentTransactions.length));
-        const dailyExpenseRate = totalExpenses / daysOfData;
-        const dailyIncomeRate = totalIncome / daysOfData;
-        const dailyNetRate = dailyIncomeRate - dailyExpenseRate;
-
-        // Generate forecast points
+        // Generate forecast points (calculate in USD)
         const forecastPoints = [];
-        let runningBalance = currentBalance;
-
         for (let i = 0; i <= daysToForecast; i += 7) {
-            const projectedBalance = currentBalance + (dailyNetRate * i);
+            const projectedBalanceUSD = currentBalanceUSD + (dailyNetRateUSD * i);
             forecastPoints.push({
                 day: i,
-                balance: projectedBalance,
+                balance: projectedBalanceUSD,
                 label: i === 0 ? 'Today' : `Day ${i}`
             });
-            runningBalance = projectedBalance;
         }
 
-        // Calculate days until $0 (if negative trend)
-        let daysUntilZero = null;
-        if (dailyNetRate < 0 && currentBalance > 0) {
-            daysUntilZero = Math.floor(currentBalance / Math.abs(dailyNetRate));
-        }
+        const daysUntilZero = dailyNetRateUSD < 0 && currentBalanceUSD > 0
+            ? Math.floor(currentBalanceUSD / Math.abs(dailyNetRateUSD))
+            : null;
 
         return {
-            currentBalance,
-            projectedBalance: currentBalance + (dailyNetRate * daysToForecast),
-            dailyNetRate,
-            dailyExpenseRate,
-            dailyIncomeRate,
+            currentBalance: currentBalanceUSD,
+            projectedBalance: currentBalanceUSD + (dailyNetRateUSD * daysToForecast),
+            dailyNetRate: dailyNetRateUSD,
             forecastPoints,
             daysUntilZero,
-            trend: dailyNetRate >= 0 ? 'positive' : 'negative'
+            trend: dailyNetRateUSD >= 0 ? 'positive' : 'negative'
         };
-    }, [transactions, accounts, daysToForecast]);
+    }, [transactions, accounts, stats, convert, selectedCurrency, daysToForecast]);
 
-    const { formatAmount, getCurrencySymbol } = useCurrency();
+    const { getCurrencySymbol } = useCurrency();
 
     if (!forecast) {
         return (
