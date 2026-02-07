@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, Loader2, Delete, Wallet, ChevronDown } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
+import { getLocalISODate } from '../../utils/dateUtils';
 import { FirebaseService } from '../../services/FirebaseService';
 import { StreakService } from '../../services/StreakService';
 import { useToast } from '../../context/ToastContext';
@@ -13,7 +14,7 @@ const QuickAddModal = ({ isOpen, onClose, user, accounts, selectedAccountId: def
     const navigate = useNavigate();
     const [amount, setAmount] = useState('0');
     const [note, setNote] = useState('');
-    const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+    const [date, setDate] = useState(getLocalISODate());
     const [categoryId, setCategoryId] = useState('food');
     const [accountId, setAccountId] = useState(defaultAccountId || '');
     const [currency, setCurrency] = useState('USD');
@@ -206,7 +207,7 @@ const QuickAddModal = ({ isOpen, onClose, user, accounts, selectedAccountId: def
 
             setAmount('0');
             setNote('');
-            setDate(new Date().toISOString().split('T')[0]);
+            setDate(getLocalISODate());
             setCategoryId('food');
             onClose();
         } catch (err) {
@@ -317,7 +318,7 @@ const QuickAddModal = ({ isOpen, onClose, user, accounts, selectedAccountId: def
                                 />
                                 <div className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-slate-800 text-slate-400 text-xs font-medium border border-slate-700 pointer-events-none">
                                     <LucideIcons.Calendar className="w-3 h-3" />
-                                    <span>{date === new Date().toISOString().split('T')[0] ? 'Today' : date}</span>
+                                    <span>{date === getLocalISODate() ? 'Today' : date}</span>
                                 </div>
                             </div>
                         </div>

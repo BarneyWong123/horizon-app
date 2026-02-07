@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Loader2, Trash2, ChevronDown, ChevronUp, Receipt, Calculator } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
+import { getLocalISODate } from '../../utils/dateUtils';
 import { CURRENCIES, getCurrencyByCode } from '../../data/currencies';
 import { FirebaseService } from '../../services/FirebaseService';
 import { useToast } from '../../context/ToastContext';
@@ -12,7 +13,7 @@ const TransactionEditModal = ({ isOpen, onClose, user, transaction, accounts = [
     const [amount, setAmount] = useState('');
     const [note, setNote] = useState('');
     const [categoryId, setCategoryId] = useState('other');
-    const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+    const [date, setDate] = useState(getLocalISODate());
     const [currency, setCurrency] = useState('USD');
     const [loading, setLoading] = useState(false);
     const [deleting, setDeleting] = useState(false);
@@ -30,7 +31,7 @@ const TransactionEditModal = ({ isOpen, onClose, user, transaction, accounts = [
             setAmount(transaction.total?.toString() || '');
             setNote(transaction.merchant || '');
             setCategoryId(transaction.category || 'other');
-            setDate(transaction.date?.split('T')[0] || new Date().toISOString().split('T')[0]);
+            setDate(transaction.date?.split('T')[0] || getLocalISODate());
             setCurrency(transaction.currency || 'USD');
             // If it's a new scan, we might have a suggested account already or default to first
             setAccountId(transaction.accountId || (accounts.length > 0 ? accounts[0].id : ''));

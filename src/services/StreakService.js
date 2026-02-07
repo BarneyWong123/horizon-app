@@ -3,6 +3,7 @@
 
 import { doc, getDoc, setDoc, serverTimestamp, onSnapshot } from 'firebase/firestore';
 import { db } from '../config/firebase';
+import { getLocalISODate } from '../utils/dateUtils';
 
 export const StreakService = {
     /**
@@ -33,9 +34,7 @@ export const StreakService = {
         const streakRef = doc(db, "users", uid, "settings", "streak");
         const streakData = await this.getStreak(uid);
 
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const todayStr = today.toISOString().split('T')[0];
+        const todayStr = getLocalISODate();
 
         // If already logged today, just return current streak
         if (streakData.lastLogDate === todayStr) {
@@ -50,10 +49,12 @@ export const StreakService = {
         let milestone = null;
 
         if (streakData.lastLogDate) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
             const lastDate = new Date(streakData.lastLogDate);
             const yesterday = new Date(today);
             yesterday.setDate(yesterday.getDate() - 1);
-            const yesterdayStr = yesterday.toISOString().split('T')[0];
+            const yesterdayStr = getLocalISODate(yesterday);
 
             if (streakData.lastLogDate === yesterdayStr) {
                 // Consecutive day - increment streak

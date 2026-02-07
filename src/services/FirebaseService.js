@@ -26,6 +26,7 @@ import {
     getDownloadURL
 } from "firebase/storage";
 import { auth, db, storage } from "../config/firebase";
+import { getLocalISODate } from "../utils/dateUtils";
 
 const googleProvider = new GoogleAuthProvider();
 
@@ -57,7 +58,7 @@ export const FirebaseService = {
         return addDoc(transactionsRef, {
             ...transactionData,
             createdAt: serverTimestamp(),
-            date: transactionData.date || new Date().toISOString()
+            date: transactionData.date || getLocalISODate()
         });
     },
 

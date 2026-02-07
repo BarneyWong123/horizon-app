@@ -1,5 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import {
+    getLocalISODate,
+    getLocalStartOfToday,
+    getLocalStartOfWeek,
+    getLocalStartOfMonth,
+    getLocalStartOfYear
+} from '../../utils/dateUtils';
 import { FirebaseService } from '../../services/FirebaseService';
 import { StreakService } from '../../services/StreakService';
 import AnalyticsSection from './AnalyticsSection';
@@ -105,12 +112,10 @@ const Dashboard = ({ user }) => {
 
     // Filter transactions by category and time period
     const filteredTransactions = useMemo(() => {
-        const now = new Date();
-        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const startOfWeek = new Date(today);
-        startOfWeek.setDate(today.getDate() - today.getDay());
-        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-        const startOfYear = new Date(now.getFullYear(), 0, 1);
+        const today = getLocalStartOfToday();
+        const startOfWeek = getLocalStartOfWeek();
+        const startOfMonth = getLocalStartOfMonth();
+        const startOfYear = getLocalStartOfYear();
 
         return transactions.filter(t => {
             // Category filter
@@ -143,7 +148,10 @@ const Dashboard = ({ user }) => {
             return acc + amountInUSD;
         }, 0);
 
-        const dayOfMonth = new Date().getDate() || 1;
+        const today = getLocalStartOfToday();
+        const startOfWeek = getLocalStartOfWeek();
+        const startOfMonth = getLocalStartOfMonth();
+        const startOfYear = getLocalStartOfYear();
 
         const totalIncome = filteredTransactions.reduce((acc, curr) => {
             if (curr.type === 'income' || curr.category === 'income') {
@@ -157,7 +165,6 @@ const Dashboard = ({ user }) => {
         // Period-aware daily rate calculation
         let daysInPeriod = 1;
         const now = new Date();
-        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
         if (timePeriod === 'month') {
             daysInPeriod = now.getDate();
@@ -243,7 +250,7 @@ const Dashboard = ({ user }) => {
             setEditingTransaction({
                 ...analysis,
                 id: 'new-scan', // Dummy ID to trigger edit modal
-                date: analysis.date || new Date().toISOString().split('T')[0],
+                date: analysis.date || getLocalISODate(),
                 accountId: selectedAccountId || (accounts.length > 0 ? accounts[0].id : null),
                 currency: 'USD', // Default or detect?
                 isNewScan: true // Flag to handle saving vs updating
@@ -708,7 +715,7 @@ const Dashboard = ({ user }) => {
                     setEditingTransaction({
                         ...parsed,
                         id: 'new-voice',
-                        date: parsed.date || new Date().toISOString().split('T')[0],
+                        date: parsed.date || getLocalISODate(),
                         accountId: selectedAccountId || (accounts.length > 0 ? accounts[0].id : null),
                         currency: selectedCurrency, // Use selected currency for voice entry
                         isNewVoice: true

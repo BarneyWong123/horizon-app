@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Camera, FileText, Loader2, CheckCircle2, X, AlertTriangle } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
+import { getLocalStartOfMonth } from '../../utils/dateUtils';
 import { OpenAIService } from '../../services/OpenAIService';
 import { FirebaseService } from '../../services/FirebaseService';
 import { StreakService } from '../../services/StreakService';
@@ -27,9 +28,7 @@ const SmartScan = ({ user }) => {
     // Fetch monthly scan count
     React.useEffect(() => {
         if (!user) return;
-        const startOfMonth = new Date();
-        startOfMonth.setDate(1);
-        startOfMonth.setHours(0, 0, 0, 0);
+        const startOfMonth = getLocalStartOfMonth();
 
         const unsubscribe = FirebaseService.subscribeToTransactions(user.uid, (data) => {
             const monthlyScans = data.filter(t =>
