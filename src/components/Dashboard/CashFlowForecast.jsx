@@ -7,8 +7,8 @@ const CashFlowForecast = ({ transactions, accounts, daysToForecast = 30 }) => {
             return null; // Need at least a week of data
         }
 
-        // Calculate current total balance
-        const currentBalance = accounts.reduce((sum, acc) => sum + (acc.balance || 0), 0);
+        // Calculate current total balance (ensure valid number)
+        const currentBalance = accounts?.reduce((sum, acc) => sum + (acc.balance || 0), 0) || 0;
 
         // Analyze spending patterns from last 30 days
         const now = new Date();
@@ -19,14 +19,14 @@ const CashFlowForecast = ({ transactions, accounts, daysToForecast = 30 }) => {
             return txDate >= thirtyDaysAgo;
         });
 
-        // Calculate daily averages
+        // Calculate daily averages (use 'total' field, not 'amount')
         const totalExpenses = recentTransactions
             .filter(t => t.type === 'expense')
-            .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+            .reduce((sum, t) => sum + Math.abs(t.total || 0), 0);
 
         const totalIncome = recentTransactions
             .filter(t => t.type === 'income')
-            .reduce((sum, t) => sum + t.amount, 0);
+            .reduce((sum, t) => sum + (t.total || 0), 0);
 
         const daysOfData = Math.min(30, Math.max(7, recentTransactions.length));
         const dailyExpenseRate = totalExpenses / daysOfData;
@@ -104,8 +104,8 @@ const CashFlowForecast = ({ transactions, accounts, daysToForecast = 30 }) => {
                     <h3 className="text-white font-bold">30-Day Forecast</h3>
                 </div>
                 <span className={`text-xs font-medium px-2 py-1 rounded-full ${forecast.trend === 'positive'
-                        ? 'bg-emerald-500/20 text-emerald-400'
-                        : 'bg-amber-500/20 text-amber-400'
+                    ? 'bg-emerald-500/20 text-emerald-400'
+                    : 'bg-amber-500/20 text-amber-400'
                     }`}>
                     {forecast.trend === 'positive' ? '+' : ''}{formatCurrency(forecast.dailyNetRate)}/day
                 </span>
