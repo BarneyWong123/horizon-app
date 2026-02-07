@@ -1,13 +1,21 @@
 import React, { useState } from 'react';
-import { Plus, Camera, Keyboard, X } from 'lucide-react';
+import { Plus, Camera, Keyboard, Mic, X } from 'lucide-react';
 
-const FloatingActionButton = ({ onQuickAdd, onScan }) => {
+const FloatingActionButton = ({ onQuickAdd, onScan, onVoice }) => {
     const [isOpen, setIsOpen] = useState(false);
 
     return (
         <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-40">
             {/* Sub-buttons */}
             <div className={`absolute bottom-16 right-0 flex flex-col gap-3 transition-all duration-300 ${isOpen ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
+                {/* Voice Button */}
+                <button
+                    onClick={() => { onVoice(); setIsOpen(false); }}
+                    className="w-12 h-12 bg-purple-500 hover:bg-purple-600 rounded-full flex items-center justify-center shadow-lg transition-all"
+                    title="Voice Entry"
+                >
+                    <Mic className="w-5 h-5 text-white" />
+                </button>
                 {/* Scan Button */}
                 <button
                     onClick={() => { onScan(); setIsOpen(false); }}

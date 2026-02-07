@@ -52,7 +52,7 @@ const TransactionEditModal = ({ isOpen, onClose, user, transaction, accounts = [
                 return;
             }
 
-            if (transaction.isNewScan) {
+            if (transaction.isNewScan || transaction.isNewVoice) {
                 // Apply New Balance
                 if (accountId) {
                     const targetAccount = accounts.find(a => a.id === accountId);
@@ -71,7 +71,7 @@ const TransactionEditModal = ({ isOpen, onClose, user, transaction, accounts = [
                     date: date,
                     currency: currency,
                     accountId: accountId || null,
-                    inputType: 'image',
+                    inputType: transaction.isNewScan ? 'image' : 'audio',
                     items: transaction.items || []
                 });
                 showToast('Transaction saved!', 'success');

@@ -19,6 +19,7 @@ import { useToast } from '../../context/ToastContext';
 import { OpenAIService } from '../../services/OpenAIService';
 import { useCurrency } from '../../context/CurrencyContext';
 import BudgetProgress from './BudgetProgress';
+import VoiceInputModal from './VoiceInputModal';
 
 const Dashboard = ({ user }) => {
     const navigate = useNavigate();
@@ -49,6 +50,7 @@ const Dashboard = ({ user }) => {
     // Dashboard customization
     const [showDashboardPrefs, setShowDashboardPrefs] = useState(false);
     const [dashboardPrefs, setDashboardPrefs] = useState(null);
+    const [showVoiceInput, setShowVoiceInput] = useState(false);
 
     useEffect(() => {
         // Initialize default account if none exists (also ensures user document exists)
@@ -136,7 +138,7 @@ const Dashboard = ({ user }) => {
     const stats = useMemo(() => {
         const totalSpent = filteredTransactions.reduce((acc, curr) => {
             if (curr.type === 'income' || curr.category === 'income') return acc;
-            const txCurrency = curr.currency || selectedCurrency; // Default to selectedCurrency, not USD
+            const txCurrency = curr.currency || 'USD'; // Transactions should usually have a currency, default to USD for now if unknown
             const amountInUSD = txCurrency === 'USD' ? (curr.total || 0) : convert(curr.total || 0, txCurrency, 'USD');
             return acc + amountInUSD;
         }, 0);
@@ -145,7 +147,7 @@ const Dashboard = ({ user }) => {
 
         const totalIncome = filteredTransactions.reduce((acc, curr) => {
             if (curr.type === 'income' || curr.category === 'income') {
-                const txCurrency = curr.currency || selectedCurrency;
+                const txCurrency = curr.currency || 'USD';
                 const amountInUSD = txCurrency === 'USD' ? (curr.total || 0) : convert(curr.total || 0, txCurrency, 'USD');
                 return acc + amountInUSD;
             }
@@ -167,7 +169,9 @@ const Dashboard = ({ user }) => {
         const totalBalance = accounts.reduce((acc, curr) => {
             // If an account is selected, only count that one. Otherwise count all.
             if (selectedAccountId && curr.id !== selectedAccountId) return acc;
-            const balanceInUSD = convert(curr.balance || 0, curr.currency || 'USD', 'USD');
+            // CRITICAL FIX: Base currency should be account's currency or default to selectedCurrency, then convert to USD base for stats
+            const acctCurrency = curr.currency || selectedCurrency;
+            const balanceInUSD = acctCurrency === 'USD' ? (curr.balance || 0) : convert(curr.balance || 0, acctCurrency, 'USD');
             return acc + balanceInUSD;
         }, 0);
 
@@ -178,7 +182,7 @@ const Dashboard = ({ user }) => {
             // Only count expenses for category breakdown
             if (t.type === 'income' || t.category === 'income') return acc;
             const cat = t.category || 'other';
-            const txCurrency = t.currency || selectedCurrency;
+            const txCurrency = t.currency || 'USD';
             const amountInUSD = txCurrency === 'USD' ? (t.total || 0) : convert(t.total || 0, txCurrency, 'USD');
             acc[cat] = (acc[cat] || 0) + amountInUSD;
             return acc;
@@ -412,168 +416,193 @@ const Dashboard = ({ user }) => {
                 )}
             </div>
 
-            {/* Account Cards */}
-            {accounts.length > 0 && (
-                <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0">
-                    <button
-                        onClick={() => setSelectedAccountId(null)}
-                        className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all ${selectedAccountId === null
-                            ? 'bg-emerald-500 text-white'
-                            : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
-                            }`}
-                    >
-                        All Accounts
-                    </button>
-                    {accounts.map(account => (
-                        <AccountCard
-                            key={account.id}
-                            account={account}
-                            isSelected={selectedAccountId === account.id}
-                            onClick={() => setSelectedAccountId(account.id)}
-                            compact
-                        />
-                    ))}
-                </div>
-            )}
+            {/* Dashboard Widgets (Dynamic Order) */}
+            {(dashboardPrefs?.dashboardWidgets || ['accounts', 'streak', 'forecast', 'stats', 'analytics', 'budget', 'transactions']).map(widgetId => {
+                if (!shouldShowWidget(widgetId)) return null;
 
-            {/* Streak & Forecast Row (Market Research: Gamification + Forecasting) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <StreakBadge
-                    streak={streakData.currentStreak}
-                    longestStreak={streakData.longestStreak}
-                />
-                <CashFlowForecast
-                    transactions={transactions}
-                    accounts={accounts}
-                />
-            </div>
-
-            {/* Stats Cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-                <div
-                    onClick={() => setTimePeriod(prev => prev === 'year' ? 'month' : 'year')}
-                    className="card rounded-xl p-3 md:p-4 cursor-pointer transition-colors active:scale-95 duration-200"
-                    style={{ backgroundColor: 'var(--bg-card)' }}
-                >
-                    <div className="flex items-center justify-between mb-2">
-                        <span className="text-[10px] uppercase tracking-wider font-bold" style={{ color: 'var(--text-muted)' }}>Total Spent</span>
-                        <Wallet className="text-emerald-500 w-4 h-4" />
-                    </div>
-                    <p className="text-xl md:text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>{formatAmount(stats.totalSpent)}</p>
-                    <p className="text-xs mt-1 flex items-center gap-1" style={{ color: 'var(--text-muted)' }}>
-                        {timePeriod === 'month' ? 'This month' : timePeriod === 'year' ? 'This year' : 'All time'}
-                        <LucideIcons.RefreshCw className="w-3 h-3 opacity-50" />
-                        {selectedCategory && ` • ${selectedCategoryData?.name}`}
-                    </p>
-                </div>
-
-                <div
-                    onClick={() => setAverageType(prev => prev === 'daily' ? 'monthly' : 'daily')}
-                    className="card rounded-xl p-3 md:p-4 cursor-pointer transition-colors active:scale-95 duration-200"
-                    style={{ backgroundColor: 'var(--bg-card)' }}
-                >
-                    <div className="flex items-center justify-between mb-2">
-                        <span
-                            className="text-[10px] uppercase tracking-wider font-bold flex items-center gap-1"
-                            style={{ color: 'var(--text-muted)' }}
-                        >
-                            {averageType === 'daily' ? 'Daily Average' : 'Monthly Average'}
-                            <LucideIcons.ArrowLeftRight className="w-3 h-3 opacity-50" />
-                        </span>
-                        <TrendingDown className="text-amber-500 w-4 h-4" />
-                    </div>
-                    <p className="text-xl md:text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>{formatAmount(averageType === 'daily' ? stats.dailyRate : stats.displayAverage)}</p>
-                    <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-                        {averageType === 'daily' ? 'Per day' : 'Per 30 days'}
-                    </p>
-                </div>
-
-                <div
-                    onClick={() => {
-                        const currentIdx = selectedAccountId ? accounts.findIndex(a => a.id === selectedAccountId) : -1;
-                        const nextIdx = currentIdx + 1;
-                        if (nextIdx < accounts.length) {
-                            setSelectedAccountId(accounts[nextIdx].id);
-                        } else {
-                            setSelectedAccountId(null);
+                switch (widgetId) {
+                    case 'accounts':
+                        return accounts.length > 0 && (
+                            <div key="accounts" className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0">
+                                <button
+                                    onClick={() => setSelectedAccountId(null)}
+                                    className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all ${selectedAccountId === null
+                                        ? 'bg-emerald-500 text-white'
+                                        : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                                        }`}
+                                >
+                                    All Accounts
+                                </button>
+                                {accounts.map(account => (
+                                    <AccountCard
+                                        key={account.id}
+                                        account={account}
+                                        isSelected={selectedAccountId === account.id}
+                                        onClick={() => setSelectedAccountId(account.id)}
+                                        compact
+                                    />
+                                ))}
+                            </div>
+                        );
+                    case 'streak':
+                    case 'forecast':
+                        // Render both together if both visible
+                        if (widgetId === 'streak' && shouldShowWidget('forecast')) {
+                            return (
+                                <div key="streak-forecast" className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <StreakBadge
+                                        streak={streakData.currentStreak}
+                                        longestStreak={streakData.longestStreak}
+                                    />
+                                    <CashFlowForecast
+                                        transactions={transactions}
+                                        accounts={accounts}
+                                    />
+                                </div>
+                            );
                         }
-                    }}
-                    className="card rounded-xl p-3 md:p-4 cursor-pointer transition-colors active:scale-95 duration-200"
-                    style={{ backgroundColor: 'var(--bg-card)' }}
-                >
-                    <div className="flex items-center justify-between mb-2">
-                        <span className="text-[10px] uppercase tracking-wider font-bold" style={{ color: 'var(--text-muted)' }}>Balance</span>
-                        <Wallet className="text-blue-500 w-4 h-4" />
-                    </div>
-                    <p className="text-xl md:text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>{formatAmount(stats.totalBalance)}</p>
-                    <p className="text-xs mt-1 flex items-center gap-1" style={{ color: 'var(--text-muted)' }}>
-                        {selectedAccountId ? accounts.find(a => a.id === selectedAccountId)?.name : 'All accounts'}
-                        <LucideIcons.RefreshCw className="w-3 h-3 opacity-50" />
-                    </p>
-                </div>
+                        if (widgetId === 'forecast' && shouldShowWidget('streak')) return null; // Handled by streak
 
-                <div
-                    className="card rounded-xl p-3 md:p-4"
-                    style={{ backgroundColor: 'var(--bg-card)' }}
-                >
-                    <div className="flex items-center justify-between mb-2 group relative">
-                        <span className="text-[10px] uppercase tracking-wider font-bold flex items-center gap-1 cursor-help" style={{ color: 'var(--text-muted)' }}>
-                            Days Left
-                            <LucideIcons.Info className="w-3 h-3" />
-                        </span>
-                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10" style={{ backgroundColor: 'var(--bg-card)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)' }}>
-                            Estimated time until your total balance reaches zero at your current daily spending rate.
-                        </div>
-                        <Calendar className="text-purple-500 w-4 h-4" />
-                    </div>
-                    {/* Compliance Neutral: Use purple instead of red */}
-                    <p className={`text-xl md:text-2xl font-bold ${stats.daysUntilZero > 30 ? 'text-emerald-500' : stats.daysUntilZero > 14 ? 'text-amber-500' : 'text-purple-400'}`}>
-                        {stats.daysUntilZero === Infinity ? '∞' : stats.daysUntilZero}
-                    </p>
-                    <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>At current rate</p>
-                </div>
-            </div>
+                        // Render solo if only one visible
+                        if (widgetId === 'streak') {
+                            return <StreakBadge key="streak" streak={streakData.currentStreak} longestStreak={streakData.longestStreak} />;
+                        }
+                        if (widgetId === 'forecast') {
+                            return <CashFlowForecast key="forecast" transactions={transactions} accounts={accounts} />;
+                        }
+                        return null;
 
+                    case 'stats':
+                        return (
+                            <div key="stats" className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+                                <div
+                                    onClick={() => setTimePeriod(prev => prev === 'year' ? 'month' : 'year')}
+                                    className="card rounded-xl p-3 md:p-4 cursor-pointer transition-colors active:scale-95 duration-200"
+                                    style={{ backgroundColor: 'var(--bg-card)' }}
+                                >
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className="text-[10px] uppercase tracking-wider font-bold" style={{ color: 'var(--text-muted)' }}>Total Spent</span>
+                                        <Wallet className="text-emerald-500 w-4 h-4" />
+                                    </div>
+                                    <p className="text-xl md:text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>{formatAmount(stats.totalSpent)}</p>
+                                    <p className="text-xs mt-1 flex items-center gap-1" style={{ color: 'var(--text-muted)' }}>
+                                        {timePeriod === 'month' ? 'This month' : timePeriod === 'year' ? 'This year' : 'All time'}
+                                        <LucideIcons.RefreshCw className="w-3 h-3 opacity-50" />
+                                        {selectedCategory && ` • ${selectedCategoryData?.name}`}
+                                    </p>
+                                </div>
 
+                                <div
+                                    onClick={() => setAverageType(prev => prev === 'daily' ? 'monthly' : 'daily')}
+                                    className="card rounded-xl p-3 md:p-4 cursor-pointer transition-colors active:scale-95 duration-200"
+                                    style={{ backgroundColor: 'var(--bg-card)' }}
+                                >
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span
+                                            className="text-[10px] uppercase tracking-wider font-bold flex items-center gap-1"
+                                            style={{ color: 'var(--text-muted)' }}
+                                        >
+                                            {averageType === 'daily' ? 'Daily Average' : 'Monthly Average'}
+                                            <LucideIcons.ArrowLeftRight className="w-3 h-3 opacity-50" />
+                                        </span>
+                                        <TrendingDown className="text-amber-500 w-4 h-4" />
+                                    </div>
+                                    <p className="text-xl md:text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>{formatAmount(averageType === 'daily' ? stats.dailyRate : stats.displayAverage)}</p>
+                                    <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+                                        {averageType === 'daily' ? 'Per day' : 'Per 30 days'}
+                                    </p>
+                                </div>
 
-            {/* Analytics Section - New Visuals */}
-            <AnalyticsSection transactions={filteredTransactions} />
+                                <div
+                                    onClick={() => {
+                                        const currentIdx = selectedAccountId ? accounts.findIndex(a => a.id === selectedAccountId) : -1;
+                                        const nextIdx = currentIdx + 1;
+                                        if (nextIdx < accounts.length) {
+                                            setSelectedAccountId(accounts[nextIdx].id);
+                                        } else {
+                                            setSelectedAccountId(null);
+                                        }
+                                    }}
+                                    className="card rounded-xl p-3 md:p-4 cursor-pointer transition-colors active:scale-95 duration-200"
+                                    style={{ backgroundColor: 'var(--bg-card)' }}
+                                >
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className="text-[10px] uppercase tracking-wider font-bold" style={{ color: 'var(--text-muted)' }}>Balance</span>
+                                        <Wallet className="text-blue-500 w-4 h-4" />
+                                    </div>
+                                    <p className="text-xl md:text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>{formatAmount(stats.totalBalance)}</p>
+                                    <p className="text-xs mt-1 flex items-center gap-1" style={{ color: 'var(--text-muted)' }}>
+                                        {selectedAccountId ? accounts.find(a => a.id === selectedAccountId)?.name : 'All accounts'}
+                                        <LucideIcons.RefreshCw className="w-3 h-3 opacity-50" />
+                                    </p>
+                                </div>
 
-            {/* Budget Progress Section */}
-            <BudgetProgress transactions={transactions} />
+                                <div
+                                    className="card rounded-xl p-3 md:p-4"
+                                    style={{ backgroundColor: 'var(--bg-card)' }}
+                                >
+                                    <div className="flex items-center justify-between mb-2 group relative">
+                                        <span className="text-[10px] uppercase tracking-wider font-bold flex items-center gap-1 cursor-help" style={{ color: 'var(--text-muted)' }}>
+                                            Days Left
+                                            <LucideIcons.Info className="w-3 h-3" />
+                                        </span>
+                                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10" style={{ backgroundColor: 'var(--bg-card)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)' }}>
+                                            Estimated time until your total balance reaches zero at your current daily spending rate.
+                                        </div>
+                                        <LucideIcons.Calendar className="text-purple-500 w-4 h-4" />
+                                    </div>
+                                    <p className={`text-xl md:text-2xl font-bold ${stats.daysUntilZero > 30 ? 'text-emerald-500' : stats.daysUntilZero > 14 ? 'text-amber-500' : 'text-purple-400'}`}>
+                                        {stats.daysUntilZero === Infinity ? '∞' : stats.daysUntilZero}
+                                    </p>
+                                    <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>At current rate</p>
+                                </div>
+                            </div>
+                        );
 
-            {/* Recent Transactions */}
-            <div className="bg-[var(--bg-card)] border-[var(--border-subtle)] rounded-xl overflow-hidden">
-                <div className="flex items-center justify-between p-4 border-b border-slate-800">
-                    <h3 className="text-slate-400 text-sm font-medium">
-                        Recent Transactions
-                        {filteredTransactions.length > 0 && (
-                            <span className="ml-2 text-slate-600">({filteredTransactions.length})</span>
-                        )}
-                    </h3>
-                    <button
-                        onClick={() => navigate('/transactions')}
-                        className="text-emerald-500 text-sm font-medium flex items-center gap-1 hover:text-emerald-400"
-                    >
-                        See All <ChevronRight className="w-4 h-4" />
-                    </button>
-                </div>
-                {filteredTransactions.length === 0 ? (
-                    <div className="p-8 text-center">
-                        <p className="text-slate-500">No transactions found</p>
-                        <p className="text-slate-600 text-sm mt-1">
-                            {selectedCategory || timePeriod !== 'all'
-                                ? 'Try adjusting your filters'
-                                : 'Add your first transaction to get started'}
-                        </p>
-                    </div>
-                ) : (
-                    <TransactionList
-                        transactions={filteredTransactions.slice(0, 5)}
-                        onEdit={(t) => setEditingTransaction(t)}
-                    />
-                )}
-            </div>
+                    case 'analytics':
+                        return <AnalyticsSection key="analytics" transactions={filteredTransactions} />;
+
+                    case 'budget':
+                        return <BudgetProgress key="budget" transactions={transactions} />;
+
+                    case 'transactions':
+                        return (
+                            <div key="recent-transactions" className="bg-[var(--bg-card)] border-[var(--border-subtle)] rounded-xl overflow-hidden">
+                                <div className="flex items-center justify-between p-4 border-b border-slate-800">
+                                    <h3 className="text-slate-400 text-sm font-medium">
+                                        Recent Transactions
+                                        {filteredTransactions.length > 0 && (
+                                            <span className="ml-2 text-slate-600">({filteredTransactions.length})</span>
+                                        )}
+                                    </h3>
+                                    <button
+                                        onClick={() => navigate('/transactions')}
+                                        className="text-emerald-500 text-sm font-medium flex items-center gap-1 hover:text-emerald-400"
+                                    >
+                                        See All <ChevronRight className="w-4 h-4" />
+                                    </button>
+                                </div>
+                                {filteredTransactions.length === 0 ? (
+                                    <div className="p-8 text-center">
+                                        <p className="text-slate-500">No transactions found</p>
+                                        <p className="text-slate-600 text-sm mt-1">
+                                            {selectedCategory || timePeriod !== 'all'
+                                                ? 'Try adjusting your filters'
+                                                : 'Add your first transaction to get started'}
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <TransactionList
+                                        transactions={filteredTransactions.slice(0, 5)}
+                                        onEdit={(t) => setEditingTransaction(t)}
+                                    />
+                                )}
+                            </div>
+                        );
+                    default:
+                        return null;
+                }
+            })}
 
 
 
@@ -647,6 +676,24 @@ const Dashboard = ({ user }) => {
             <FloatingActionButton
                 onQuickAdd={() => setShowQuickAdd(true)}
                 onScan={() => setShowScanOptions(true)}
+                onVoice={() => setShowVoiceInput(true)}
+            />
+
+            {/* Voice Input Modal */}
+            <VoiceInputModal
+                isOpen={showVoiceInput}
+                onClose={() => setShowVoiceInput(false)}
+                onParsedTransaction={(parsed) => {
+                    setEditingTransaction({
+                        ...parsed,
+                        id: 'new-voice',
+                        date: parsed.date || new Date().toISOString().split('T')[0],
+                        accountId: selectedAccountId || (accounts.length > 0 ? accounts[0].id : null),
+                        currency: selectedCurrency, // Use selected currency for voice entry
+                        isNewVoice: true
+                    });
+                    showToast('Voice recorded! Please verify details.', 'success');
+                }}
             />
 
             {/* Quick Add Modal */}
