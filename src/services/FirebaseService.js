@@ -77,10 +77,15 @@ export const FirebaseService = {
 
     subscribeToTransactions(uid, callback, accountId = null) {
         const transactionsRef = collection(db, "users", uid, "transactions");
-        let q = query(transactionsRef, orderBy("createdAt", "desc"));
+        let q;
 
-        // Note: Firestore requires composite index for filtering + ordering
-        // For now, we filter client-side if accountId is provided
+        // Optimization: Use conditional query to avoid composite index requirement
+        // If accountId is provided, we filter server-side and sort client-side.
+        if (accountId) {
+            q = query(transactionsRef, where("accountId", "==", accountId));
+        } else {
+            q = query(transactionsRef, orderBy("createdAt", "desc"));
+        }
 
         return onSnapshot(q, (snapshot) => {
             let transactions = snapshot.docs.map(doc => ({
@@ -89,7 +94,15 @@ export const FirebaseService = {
             }));
 
             if (accountId) {
-                transactions = transactions.filter(t => t.accountId === accountId);
+                // Client-side sort needed because we didn't use orderBy in the query
+                transactions.sort((a, b) => {
+                    const getMillis = (t) => {
+                        if (!t.createdAt) return Date.now(); // Put pending writes at the top
+                        if (typeof t.createdAt.toDate === 'function') return t.createdAt.toDate().getTime();
+                        return new Date(t.createdAt).getTime();
+                    };
+                    return getMillis(b) - getMillis(a);
+                });
             }
 
             callback(transactions);
