@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import { FirebaseService } from '../services/FirebaseService';
 import { CATEGORIES as DEFAULT_CATEGORIES } from '../data/categories';
 
@@ -54,32 +54,32 @@ export const CategoryProvider = ({ children, user }) => {
         return () => unsubscribe();
     }, [user]);
 
-    const addCategory = async (categoryData) => {
+    const addCategory = useCallback(async (categoryData) => {
         return FirebaseService.addCategory(user.uid, categoryData);
-    };
+    }, [user]);
 
-    const updateCategory = async (categoryId, data) => {
+    const updateCategory = useCallback(async (categoryId, data) => {
         return FirebaseService.updateCategory(user.uid, categoryId, data);
-    };
+    }, [user]);
 
-    const deleteCategory = async (categoryId) => {
+    const deleteCategory = useCallback(async (categoryId) => {
         return FirebaseService.deleteCategory(user.uid, categoryId);
-    };
+    }, [user]);
 
-    const getCategoryById = (id) => {
+    const getCategoryById = useCallback((id) => {
         return categories.find(c => c.id === id) ||
             categories.find(c => c.id === 'other') ||
             DEFAULT_CATEGORIES[DEFAULT_CATEGORIES.length - 1]; // Fallback
-    };
+    }, [categories]);
 
-    const value = {
+    const value = useMemo(() => ({
         categories,
         loading,
         addCategory,
         updateCategory,
         deleteCategory,
         getCategoryById
-    };
+    }), [categories, loading, addCategory, updateCategory, deleteCategory, getCategoryById]);
 
     return (
         <CategoryContext.Provider value={value}>
