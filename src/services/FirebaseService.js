@@ -18,7 +18,8 @@ import {
     serverTimestamp,
     where,
     getDocs,
-    setDoc
+    setDoc,
+    writeBatch
 } from "firebase/firestore";
 import {
     ref,
@@ -232,12 +233,28 @@ export const FirebaseService = {
     },
 
     async deleteUserData(uid) {
-        // Helper to delete all docs in a collection
+        // Helper to delete all docs in a collection using batches
         const deleteCollection = async (collName) => {
             const ref = collection(db, "users", uid, collName);
             const snapshot = await getDocs(ref);
-            const promises = snapshot.docs.map(doc => deleteDoc(doc.ref));
-            await Promise.all(promises);
+
+            // Firestore batch limit is 500 operations
+            const BATCH_SIZE = 500;
+            const chunks = [];
+
+            for (let i = 0; i < snapshot.docs.length; i += BATCH_SIZE) {
+                chunks.push(snapshot.docs.slice(i, i + BATCH_SIZE));
+            }
+
+            const batchPromises = chunks.map(async (chunk) => {
+                const batch = writeBatch(db);
+                chunk.forEach(doc => {
+                    batch.delete(doc.ref);
+                });
+                await batch.commit();
+            });
+
+            await Promise.all(batchPromises);
         };
 
         await Promise.all([
