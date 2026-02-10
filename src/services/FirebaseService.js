@@ -16,9 +16,9 @@ import {
     orderBy,
     onSnapshot,
     serverTimestamp,
-    where,
     getDocs,
-    setDoc
+    setDoc,
+    limit
 } from "firebase/firestore";
 import {
     ref,
@@ -211,15 +211,15 @@ export const FirebaseService = {
         });
     },
 
-    subscribeToChat(uid, callback) {
+    subscribeToChat(uid, callback, limitCount = 50) {
         const chatsRef = collection(db, "users", uid, "chats");
-        const q = query(chatsRef, orderBy("createdAt", "asc"));
+        const q = query(chatsRef, orderBy("createdAt", "desc"), limit(limitCount));
 
         return onSnapshot(q, (snapshot) => {
             const messages = snapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data()
-            }));
+            })).reverse();
             callback(messages);
         });
     },
