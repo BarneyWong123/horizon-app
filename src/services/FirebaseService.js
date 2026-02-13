@@ -18,7 +18,8 @@ import {
     serverTimestamp,
     where,
     getDocs,
-    setDoc
+    setDoc,
+    getDoc
 } from "firebase/firestore";
 import {
     ref,
@@ -132,12 +133,16 @@ export const FirebaseService = {
         // CRITICAL: Ensure user document exists BEFORE creating subcollections
         // This prevents "phantom" documents that don't appear in queries
         const userRef = doc(db, "users", uid);
-        await setDoc(userRef, {
-            email: userEmail || null,
-            displayName: displayName || null,
-            createdAt: serverTimestamp(),
-            subscription: { tier: 'free' }
-        }, { merge: true });
+        const userSnap = await getDoc(userRef);
+
+        if (!userSnap.exists()) {
+            await setDoc(userRef, {
+                email: userEmail || null,
+                displayName: displayName || null,
+                createdAt: serverTimestamp(),
+                subscription: { tier: 'free' }
+            }, { merge: true });
+        }
 
         // Now safe to create subcollection
         const accountsRef = collection(db, "users", uid, "accounts");
@@ -357,12 +362,17 @@ export const FirebaseService = {
 
     async initializeUserDocument(uid, userData) {
         const userRef = doc(db, "users", uid);
-        return setDoc(userRef, {
-            email: userData.email || null,
-            displayName: userData.displayName || null,
-            createdAt: serverTimestamp(),
-            subscription: { tier: 'free' }
-        }, { merge: true });
+        const userSnap = await getDoc(userRef);
+
+        if (!userSnap.exists()) {
+            return setDoc(userRef, {
+                email: userData.email || null,
+                displayName: userData.displayName || null,
+                createdAt: serverTimestamp(),
+                subscription: { tier: 'free' }
+            }, { merge: true });
+        }
+        return null;
     }
 };
 
