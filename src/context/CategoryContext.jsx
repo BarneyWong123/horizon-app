@@ -28,10 +28,7 @@ export const CategoryProvider = ({ children, user }) => {
                 // Seed default categories if none exist and not yet initialized
                 console.log('Seeding default categories...');
                 try {
-                    const promises = DEFAULT_CATEGORIES.map(cat =>
-                        FirebaseService.addCategory(user.uid, cat)
-                    );
-                    await Promise.all(promises);
+                    await FirebaseService.addCategoriesBatch(user.uid, DEFAULT_CATEGORIES);
                     localStorage.setItem(`categories_initialized_${user.uid}`, 'true');
                 } catch (error) {
                     console.error("Error seeding categories:", error);
