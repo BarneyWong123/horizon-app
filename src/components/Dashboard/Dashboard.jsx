@@ -134,26 +134,33 @@ const Dashboard = ({ user }) => {
     }, [transactions, selectedCategory, timePeriod, customStartDate, customEndDate]);
 
     const stats = useMemo(() => {
-        const totalSpent = filteredTransactions.reduce((acc, curr) => {
-            if (curr.type === 'income' || curr.category === 'income') return acc;
-            const txCurrency = curr.currency || 'USD'; // Transactions should usually have a currency, default to USD for now if unknown
-            const amountInUSD = txCurrency === 'USD' ? (curr.total || 0) : convert(curr.total || 0, txCurrency, 'USD');
-            return acc + amountInUSD;
-        }, 0);
-
         const today = getLocalStartOfToday();
-        const startOfWeek = getLocalStartOfWeek();
-        const startOfMonth = getLocalStartOfMonth();
-        const startOfYear = getLocalStartOfYear();
 
-        const totalIncome = filteredTransactions.reduce((acc, curr) => {
-            if (curr.type === 'income' || curr.category === 'income') {
-                const txCurrency = curr.currency || 'USD';
-                const amountInUSD = txCurrency === 'USD' ? (curr.total || 0) : convert(curr.total || 0, txCurrency, 'USD');
-                return acc + amountInUSD;
+        let totalSpent = 0;
+        let totalIncome = 0;
+        const categoryTotals = {};
+        let minTimestamp = Infinity;
+
+        for (const curr of filteredTransactions) {
+            const isIncome = curr.type === 'income' || curr.category === 'income';
+            const txCurrency = curr.currency || 'USD';
+            const amountInUSD = txCurrency === 'USD' ? (curr.total || 0) : convert(curr.total || 0, txCurrency, 'USD');
+
+            if (isIncome) {
+                totalIncome += amountInUSD;
+            } else {
+                totalSpent += amountInUSD;
+                const cat = curr.category || 'other';
+                categoryTotals[cat] = (categoryTotals[cat] || 0) + amountInUSD;
             }
-            return acc;
-        }, 0);
+
+            if (timePeriod === 'all') {
+                const timestamp = new Date(curr.date || curr.createdAt?.toDate()).getTime();
+                if (timestamp < minTimestamp) {
+                    minTimestamp = timestamp;
+                }
+            }
+        }
 
         // Period-aware daily rate calculation
         let daysInPeriod = 1;
@@ -168,7 +175,7 @@ const Dashboard = ({ user }) => {
             const dayOfWeek = now.getDay() || 7; // 1-7 (Mon-Sun)
             daysInPeriod = dayOfWeek;
         } else if (timePeriod === 'all' && filteredTransactions.length > 0) {
-            const firstTxDate = new Date(Math.min(...filteredTransactions.map(t => new Date(t.date || t.createdAt?.toDate()))));
+            const firstTxDate = new Date(minTimestamp);
             daysInPeriod = Math.max(1, Math.floor((today - firstTxDate) / (1000 * 60 * 60 * 24)) + 1);
         } else {
             daysInPeriod = now.getDate(); // Default to day of month
@@ -177,8 +184,6 @@ const Dashboard = ({ user }) => {
         const dailyRate = totalSpent / daysInPeriod;
         const dailyIncome = totalIncome / daysInPeriod;
         const dailyBurn = dailyRate - dailyIncome;
-
-        const monthlyRate = totalSpent;
 
         let displayAverage = dailyRate;
         if (averageType === 'monthly') {
@@ -197,17 +202,6 @@ const Dashboard = ({ user }) => {
 
         const daysUntilZero = dailyBurn > 0 ? Math.floor(totalBalance / dailyBurn) : Infinity;
 
-        // Category breakdown
-        const categoryTotals = filteredTransactions.reduce((acc, t) => {
-            // Only count expenses for category breakdown
-            if (t.type === 'income' || t.category === 'income') return acc;
-            const cat = t.category || 'other';
-            const txCurrency = t.currency || 'USD';
-            const amountInUSD = txCurrency === 'USD' ? (t.total || 0) : convert(t.total || 0, txCurrency, 'USD');
-            acc[cat] = (acc[cat] || 0) + amountInUSD;
-            return acc;
-        }, {});
-
         return {
             totalSpent,
             totalIncome,
@@ -219,7 +213,7 @@ const Dashboard = ({ user }) => {
             daysUntilZero,
             categoryTotals
         };
-    }, [filteredTransactions, accounts, convert, averageType, selectedAccountId, selectedCurrency]);
+    }, [filteredTransactions, accounts, convert, averageType, selectedAccountId, selectedCurrency, timePeriod]);
 
     const selectedCategoryData = selectedCategory ? categories.find(c => c.id === selectedCategory) : null;
     const CategoryIcon = selectedCategoryData ? (LucideIcons[selectedCategoryData.icon] || LucideIcons.CircleDot) : null;
