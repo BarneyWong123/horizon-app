@@ -16,9 +16,9 @@ import {
     orderBy,
     onSnapshot,
     serverTimestamp,
-    where,
     getDocs,
-    setDoc
+    setDoc,
+    writeBatch
 } from "firebase/firestore";
 import {
     ref,
@@ -170,6 +170,21 @@ export const FirebaseService = {
             ...categoryData,
             createdAt: serverTimestamp()
         });
+    },
+
+    async addCategoriesBatch(uid, categories) {
+        const batch = writeBatch(db);
+        const categoriesRef = collection(db, "users", uid, "categories");
+
+        categories.forEach(cat => {
+            const docRef = doc(categoriesRef);
+            batch.set(docRef, {
+                ...cat,
+                createdAt: serverTimestamp()
+            });
+        });
+
+        return batch.commit();
     },
 
     async updateCategory(uid, categoryId, data) {
