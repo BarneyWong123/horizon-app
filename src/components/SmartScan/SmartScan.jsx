@@ -9,6 +9,7 @@ import { CATEGORIES, getCategoryById } from '../../data/categories';
 import { useToast } from '../../context/ToastContext';
 import { useCurrency } from '../../context/CurrencyContext';
 import { useSubscription } from '../../context/SubscriptionContext';
+import { getCurrencyByCode } from '../../data/currencies';
 import ImageUploader from './ImageUploader';
 
 const SmartScan = ({ user }) => {
@@ -229,7 +230,7 @@ const SmartScan = ({ user }) => {
                                 </div>
                                 <div>
                                     <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold mb-1">Total</p>
-                                    <p className="text-emerald-500 font-bold text-2xl">{formatAmount(result.total, result.currency)}</p>
+                                    <p className="text-emerald-500 font-bold text-2xl">{getCurrencyByCode(result.currency)?.symbol}{result.total?.toFixed(2)}</p>
                                 </div>
                             </div>
 
@@ -254,6 +255,20 @@ const SmartScan = ({ user }) => {
                                 </div>
                             </div>
 
+                            {/* Account & Currency Info */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold mb-1">Account</p>
+                                    <p className="text-white font-medium">
+                                        {accounts.find(a => a.id === result.accountId)?.name || 'None'}
+                                    </p>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold mb-1">Currency</p>
+                                    <p className="text-white font-medium">{result.currency}</p>
+                                </div>
+                            </div>
+
                             {/* Sentiment */}
                             <div>
                                 <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold mb-1">Sentiment</p>
@@ -273,7 +288,7 @@ const SmartScan = ({ user }) => {
                                         {result.items.map((item, idx) => (
                                             <div key={idx} className="flex justify-between items-center py-1.5 px-3 bg-slate-800/50 rounded-lg">
                                                 <span className="text-slate-300 text-sm truncate flex-1">{item.name}</span>
-                                                <span className="text-slate-400 text-sm font-medium ml-2">{formatAmount(item.price, result.currency)}</span>
+                                                <span className="text-slate-400 text-sm font-medium ml-2">{getCurrencyByCode(result.currency)?.symbol}{item.price?.toFixed(2)}</span>
                                             </div>
                                         ))}
                                     </div>
@@ -303,6 +318,16 @@ const SmartScan = ({ user }) => {
                                             ...result,
                                             inputType: 'image'
                                         });
+
+                                        // Deduct from account balance
+                                        if (result.accountId) {
+                                            const acct = accounts.find(a => a.id === result.accountId);
+                                            if (acct) {
+                                                const newBalance = (acct.balance || 0) - result.total;
+                                                await FirebaseService.updateAccount(user.uid, result.accountId, { balance: newBalance });
+                                            }
+                                        }
+
                                         await StreakService.recordLog(user.uid);
                                         showToast('Transaction saved!', 'success');
                                         setShowResultModal(false);
@@ -443,7 +468,7 @@ const SmartScan = ({ user }) => {
                         </div>
                         <div className="p-5 space-y-3">
                             <p className="text-slate-400 text-sm">
-                                We found an existing transaction with the same amount ({formatAmount(result?.total, result?.currency)})
+                                We found an existing transaction with the same amount ({getCurrencyByCode(result?.currency)?.symbol}{result?.total?.toFixed(2)})
                                 at <span className="text-white font-medium">{result?.merchant}</span> on {result?.date}.
                             </p>
                             <p className="text-slate-500 text-xs">Do you still want to add this transaction?</p>
