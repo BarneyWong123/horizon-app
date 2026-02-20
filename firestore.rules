@@ -40,6 +40,10 @@ service cloud.firestore {
       match /settings/{settingId} {
         allow read, write: if isAuthenticated() && isOwner(userId);
       }
+
+      match /chats/{chatId} {
+        allow read, write: if isAuthenticated() && isOwner(userId);
+      }
     }
   }
 }
