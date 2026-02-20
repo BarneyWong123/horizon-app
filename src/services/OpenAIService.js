@@ -119,6 +119,7 @@ For valid receipts, output JSON:
                 ],
             });
 
+            console.log("Token Usage:", response.usage);
             return response.choices[0].message.content;
         } catch (error) {
             console.error("Error in chat auditor:", error);
