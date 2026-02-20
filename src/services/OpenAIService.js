@@ -99,7 +99,7 @@ For valid receipts, output JSON:
                     date: t.date,
                     category: t.category,
                     currency: t.currency,
-                    items: t.items ? t.items.map(i => i.name).join(', ') : undefined
+                    items: t.items ? t.items.map(i => `${i.name} (${i.price})`).join(', ') : undefined
                 }));
 
             const systemPrompt = `You are the Horizon Chat Auditor. You have access to the user's recent transaction history below. 
