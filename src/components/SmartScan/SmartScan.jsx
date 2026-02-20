@@ -20,17 +20,23 @@ const SmartScan = ({ user }) => {
     const [showResultModal, setShowResultModal] = useState(false);
     const [showUpgradeModal, setShowUpgradeModal] = useState(false);
     const [showFailureModal, setShowFailureModal] = useState(false);
+    const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+    const [duplicateMatch, setDuplicateMatch] = useState(null);
     const [note, setNote] = useState('');
     const [scanCount, setScanCount] = useState(0);
+    const [transactions, setTransactions] = useState([]);
+    const [accounts, setAccounts] = useState([]);
+    const [preferences, setPreferences] = useState(null);
     const { showToast } = useToast();
-    const { formatAmount } = useCurrency();
+    const { formatAmount, selectedCurrency: globalCurrency } = useCurrency();
 
-    // Fetch monthly scan count
+    // Fetch monthly scan count & transactions
     React.useEffect(() => {
         if (!user) return;
         const startOfMonth = getLocalStartOfMonth();
 
         const unsubscribe = FirebaseService.subscribeToTransactions(user.uid, (data) => {
+            setTransactions(data);
             const monthlyScans = data.filter(t =>
                 t.inputType === 'image' &&
                 new Date(t.date || t.createdAt?.toDate()) >= startOfMonth
@@ -39,6 +45,14 @@ const SmartScan = ({ user }) => {
         });
 
         return () => unsubscribe();
+    }, [user]);
+
+    // Load preferences and accounts
+    React.useEffect(() => {
+        if (!user) return;
+        const unsubPrefs = FirebaseService.subscribeToPreferences(user.uid, setPreferences);
+        const unsubAccs = FirebaseService.subscribeToAccounts(user.uid, setAccounts);
+        return () => { unsubPrefs(); unsubAccs(); };
     }, [user]);
 
     const handleImageUpload = async (base64Image) => {
@@ -78,6 +92,14 @@ const SmartScan = ({ user }) => {
             }
 
             // DON'T auto-save - show result modal for user confirmation
+            // Attach default account and currency
+            const defaultAccountId = preferences?.defaultAccountId || (accounts.length > 0 ? accounts[0].id : null);
+            const defaultAccount = accounts.find(a => a.id === defaultAccountId);
+            const defaultCurrency = defaultAccount?.currency || globalCurrency || 'USD';
+
+            analysis.accountId = defaultAccountId;
+            analysis.currency = defaultCurrency;
+
             setResult(analysis);
             setShowResultModal(true);
         } catch (err) {
@@ -140,23 +162,6 @@ const SmartScan = ({ user }) => {
                         <h2 className="font-medium">Upload Receipt</h2>
                     </div>
                     <ImageUploader onUpload={handleImageUpload} disabled={loading} />
-
-                    {/* Progress Bar */}
-                    {loading && (
-                        <div className="space-y-2 animate-in fade-in duration-300">
-                            <div className="flex items-center justify-between text-xs">
-                                <span className="text-slate-400">Scanning receipt...</span>
-                                <span className="text-emerald-500 font-medium">{Math.round(progress)}%</span>
-                            </div>
-                            <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
-                                <div
-                                    className="bg-gradient-to-r from-emerald-500 to-emerald-400 h-full rounded-full transition-all duration-300 ease-out"
-                                    style={{ width: `${progress}%` }}
-                                />
-                            </div>
-                            <p className="text-[10px] text-slate-500 text-center">Analyzing with AI vision...</p>
-                        </div>
-                    )}
                 </div>
 
                 <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4 space-y-4">
@@ -224,7 +229,7 @@ const SmartScan = ({ user }) => {
                                 </div>
                                 <div>
                                     <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold mb-1">Total</p>
-                                    <p className="text-emerald-500 font-bold text-2xl">${result.total?.toFixed(2)}</p>
+                                    <p className="text-emerald-500 font-bold text-2xl">{formatAmount(result.total, result.currency)}</p>
                                 </div>
                             </div>
 
@@ -268,7 +273,7 @@ const SmartScan = ({ user }) => {
                                         {result.items.map((item, idx) => (
                                             <div key={idx} className="flex justify-between items-center py-1.5 px-3 bg-slate-800/50 rounded-lg">
                                                 <span className="text-slate-300 text-sm truncate flex-1">{item.name}</span>
-                                                <span className="text-slate-400 text-sm font-medium ml-2">${item.price?.toFixed(2)}</span>
+                                                <span className="text-slate-400 text-sm font-medium ml-2">{formatAmount(item.price, result.currency)}</span>
                                             </div>
                                         ))}
                                     </div>
@@ -280,12 +285,24 @@ const SmartScan = ({ user }) => {
                         <div className="p-4 bg-slate-800/50 border-t border-slate-700">
                             <button
                                 onClick={async () => {
+                                    // Check for potential duplicates
+                                    const potentialDup = transactions.find(t =>
+                                        t.total === result.total &&
+                                        t.date === result.date &&
+                                        t.merchant?.toLowerCase() === result.merchant?.toLowerCase()
+                                    );
+
+                                    if (potentialDup) {
+                                        setDuplicateMatch(potentialDup);
+                                        setShowDuplicateModal(true);
+                                        return;
+                                    }
+
                                     try {
                                         await FirebaseService.addTransaction(user.uid, {
                                             ...result,
                                             inputType: 'image'
                                         });
-                                        // Record streak
                                         await StreakService.recordLog(user.uid);
                                         showToast('Transaction saved!', 'success');
                                         setShowResultModal(false);
@@ -381,6 +398,83 @@ const SmartScan = ({ user }) => {
                                 className="w-full text-slate-500 hover:text-slate-400 text-sm font-medium py-1"
                             >
                                 Not now
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Centered Progress Overlay */}
+            {loading && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="w-full max-w-xs p-6 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl space-y-4">
+                        <div className="flex items-center justify-center">
+                            <Loader2 className="w-10 h-10 text-emerald-500 animate-spin" />
+                        </div>
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between text-xs">
+                                <span className="text-slate-400">Scanning receipt...</span>
+                                <span className="text-emerald-500 font-medium">{Math.round(progress)}%</span>
+                            </div>
+                            <div className="w-full bg-slate-800 rounded-full h-2.5 overflow-hidden">
+                                <div
+                                    className="bg-gradient-to-r from-emerald-500 to-emerald-400 h-full rounded-full transition-all duration-300 ease-out"
+                                    style={{ width: `${progress}%` }}
+                                />
+                            </div>
+                            <p className="text-xs text-slate-500 text-center">Analyzing with AI vision...</p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Duplicate Confirmation Modal */}
+            {showDuplicateModal && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="w-full max-w-sm bg-slate-900 border border-amber-500/30 rounded-2xl shadow-2xl overflow-hidden">
+                        <div className="p-4 bg-amber-500/10 border-b border-amber-500/20 flex items-center gap-3">
+                            <div className="w-10 h-10 bg-amber-500 rounded-full flex items-center justify-center">
+                                <AlertTriangle className="w-6 h-6 text-white" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-bold text-white">Potential Duplicate</h3>
+                                <p className="text-xs text-amber-400">A similar entry already exists</p>
+                            </div>
+                        </div>
+                        <div className="p-5 space-y-3">
+                            <p className="text-slate-400 text-sm">
+                                We found an existing transaction with the same amount ({formatAmount(result?.total, result?.currency)})
+                                at <span className="text-white font-medium">{result?.merchant}</span> on {result?.date}.
+                            </p>
+                            <p className="text-slate-500 text-xs">Do you still want to add this transaction?</p>
+                        </div>
+                        <div className="p-4 bg-slate-800/50 border-t border-slate-700 flex gap-3">
+                            <button
+                                onClick={() => { setShowDuplicateModal(false); setDuplicateMatch(null); }}
+                                className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-xl transition-all"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    try {
+                                        await FirebaseService.addTransaction(user.uid, {
+                                            ...result,
+                                            inputType: 'image'
+                                        });
+                                        await StreakService.recordLog(user.uid);
+                                        showToast('Transaction saved!', 'success');
+                                        setShowDuplicateModal(false);
+                                        setShowResultModal(false);
+                                        setResult(null);
+                                        setDuplicateMatch(null);
+                                    } catch (err) {
+                                        showToast('Failed to save', 'error');
+                                    }
+                                }}
+                                className="flex-1 bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 rounded-xl transition-all"
+                            >
+                                Add Anyway
                             </button>
                         </div>
                     </div>

@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { FirebaseService } from '../../services/FirebaseService';
-import { Compass, Loader2 } from 'lucide-react';
+import { Compass, Loader2, Fingerprint } from 'lucide-react';
+import { NativeBiometric } from 'capacitor-native-biometric';
+import { Capacitor } from '@capacitor/core';
 
 const Login = () => {
     const [isLogin, setIsLogin] = useState(true);
@@ -17,6 +19,22 @@ const Login = () => {
             let result;
             if (isLogin) {
                 result = await FirebaseService.login(email, password);
+
+                // If login successful and on mobile, check if we should save credentials
+                if (result.user && Capacitor.getPlatform() !== 'web') {
+                    try {
+                        const biometryAvailable = await NativeBiometric.isAvailable();
+                        if (biometryAvailable.isAvailable) {
+                            await NativeBiometric.setCredentials({
+                                username: email,
+                                password: password,
+                                server: "com.horizon.pfm"
+                            });
+                        }
+                    } catch (e) {
+                        console.error("Failed to save credentials for biometrics:", e);
+                    }
+                }
             } else {
                 result = await FirebaseService.signUp(email, password);
             }
@@ -119,6 +137,31 @@ const Login = () => {
                         </svg>
                         <span>Continue with Google</span>
                     </button>
+
+                    {Capacitor.getPlatform() !== 'web' && (
+                        <button
+                            onClick={async () => {
+                                setLoading(true);
+                                try {
+                                    const result = await NativeBiometric.getCredentials({ server: "com.horizon.pfm" });
+                                    if (result.username && result.password) {
+                                        await FirebaseService.login(result.username, result.password);
+                                    } else {
+                                        setError("No biometric credentials found. Please log in normally once.");
+                                    }
+                                } catch (err) {
+                                    console.error('Biometric login failed:', err);
+                                    setError("Biometric login failed. Please use email/password.");
+                                } finally {
+                                    setLoading(false);
+                                }
+                            }}
+                            className="mt-4 w-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 font-bold py-4 rounded-xl border border-emerald-500/30 flex items-center justify-center space-x-3 transition-colors"
+                        >
+                            <Fingerprint className="w-5 h-5" />
+                            <span>Login with Biometrics</span>
+                        </button>
+                    )}
 
 
                     <div className="mt-8 text-center border-t border-slate-800/50 pt-6">

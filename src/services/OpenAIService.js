@@ -13,9 +13,8 @@ export const OpenAIService = {
      */
     async scanReceipt(base64Image) {
         try {
-            const now = new Date();
-            const dateStr = now.toISOString().split('T')[0];
-            const dayName = now.toLocaleDateString('en-US', { weekday: 'long' });
+            const dateStr = getLocalISODate();
+            const dayName = new Date().toLocaleDateString('en-US', { weekday: 'long' });
 
             const response = await openai.chat.completions.create({
                 model: "gpt-4o",
@@ -90,11 +89,18 @@ For valid receipts, output JSON:
      */
     async chatWithAuditor(messages, transactions) {
         try {
-            const systemPrompt = `You are the Horizon Chat Auditor. You have access to the user's transaction history below. 
+            // Limit transactions to most recent 100 to prevent token overflow
+            const recentTransactions = transactions
+                .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
+                .slice(0, 100)
+                .map(t => ({ merchant: t.merchant, total: t.total, date: t.date, category: t.category, currency: t.currency }));
+
+            const systemPrompt = `You are the Horizon Chat Auditor. You have access to the user's recent transaction history below. 
       Use this data to answer their questions accurately. Be concise and professional.
+      Today's date is ${getLocalISODate()}.
       
-      TRANSACTIONS:
-      ${JSON.stringify(transactions)}
+      TRANSACTIONS (most recent ${recentTransactions.length}):
+      ${JSON.stringify(recentTransactions)}
       
       If asked about totals, dates, or specific spending habits, refer to the data above.`;
 

@@ -183,8 +183,13 @@ const Sidebar = ({ user, isCollapsed, onToggle }) => {
 
             {/* Mobile Bottom Navigation */}
             <nav
-                className="md:hidden fixed bottom-0 left-0 right-0 px-2 py-1 z-50 safe-area-inset-bottom border-t"
-                style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-default)' }}
+                className="md:hidden fixed bottom-0 left-0 right-0 px-2 z-50 border-t"
+                style={{
+                    backgroundColor: 'var(--bg-card)',
+                    borderColor: 'var(--border-default)',
+                    paddingBottom: 'calc(4px + env(safe-area-inset-bottom))',
+                    paddingTop: '4px'
+                }}
             >
                 <div className="flex justify-around items-center">
                     {mobileNavItems.map((item) => {
@@ -217,8 +222,13 @@ const Sidebar = ({ user, isCollapsed, onToggle }) => {
 
             {/* Mobile Header */}
             <header
-                className="md:hidden fixed top-0 left-0 right-0 backdrop-blur-sm px-4 py-3 z-40 flex items-center justify-between border-b"
-                style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-default)' }}
+                className="md:hidden fixed top-0 left-0 right-0 backdrop-blur-sm px-4 z-40 flex items-center justify-between border-b"
+                style={{
+                    backgroundColor: 'var(--bg-card)',
+                    borderColor: 'var(--border-default)',
+                    paddingTop: 'calc(12px + env(safe-area-inset-top))',
+                    paddingBottom: '12px'
+                }}
             >
                 <div className="flex items-center gap-2">
                     <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center shadow-sm" style={{ backgroundColor: branding.logoUrl ? 'var(--bg-card)' : 'var(--bg-input)' }}>

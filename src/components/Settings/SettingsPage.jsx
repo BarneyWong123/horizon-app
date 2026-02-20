@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import {
     User, Moon, Sun, Bell, Shield, Wallet, Trash2,
     ChevronRight, LogOut, Settings2, LayoutDashboard, CreditCard, Lock, X,
-    Upload, Image as ImageIcon, RotateCcw
+    Upload, Image as ImageIcon, RotateCcw, Fingerprint
 } from 'lucide-react';
+import { NativeBiometric } from 'capacitor-native-biometric';
+import { Capacitor } from '@capacitor/core';
 import { useBranding } from '../../context/BrandingContext';
 
 import { CURRENCIES } from '../../data/currencies';
@@ -218,15 +220,58 @@ const SettingsPage = ({ user }) => {
                     color="text-red-500"
                 />
                 <SettingItem
+                    icon={Fingerprint}
+                    label="Biometric Login (FaceID/TouchID)"
+                    type="toggle"
+                    value={preferences?.biometricsEnabled}
+                    onClick={async () => {
+                        const isMobile = Capacitor.getPlatform() !== 'web';
+                        if (!isMobile) {
+                            showToast('Biometrics only available on mobile devices', 'info');
+                            return;
+                        }
+
+                        const newVal = !preferences?.biometricsEnabled;
+
+                        if (newVal) {
+                            try {
+                                const result = await NativeBiometric.isAvailable();
+                                if (!result.isAvailable) {
+                                    showToast('Biometrics not available on this device', 'error');
+                                    return;
+                                }
+
+                                // Verify once to enable
+                                await NativeBiometric.verifyIdentity({
+                                    reason: "Enable biometric login",
+                                    title: "Authenticate",
+                                    subtitle: "Please verify your identity",
+                                    description: "This will allow you to log in faster next time."
+                                });
+
+                                await updatePref('biometricsEnabled', true);
+                                showToast('Biometric login enabled', 'success');
+                            } catch (err) {
+                                console.error('Biometric error:', err);
+                                showToast('Biometric verification failed', 'error');
+                            }
+                        } else {
+                            await updatePref('biometricsEnabled', false);
+                            showToast('Biometric login disabled', 'success');
+                        }
+                    }}
+                    color="text-emerald-500"
+                />
+                <SettingItem
                     icon={Lock}
-                    label="App Lock (FaceID / Pin)"
+                    label="App Lock (Pin)"
                     type="toggle"
                     value={securityPin}
                     onClick={() => {
                         setSecurityPin(!securityPin);
                         showToast(`Security check ${!securityPin ? 'enabled' : 'disabled'}`, 'success');
                     }}
-                    color="text-emerald-500"
+                    color="text-blue-500"
                 />
             </Section>
 

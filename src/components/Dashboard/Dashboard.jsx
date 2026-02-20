@@ -724,6 +724,7 @@ const Dashboard = ({ user }) => {
                 user={user}
                 accounts={accounts}
                 selectedAccountId={selectedAccountId}
+                transactions={transactions}
             />
 
             {/* Edit Transaction Modal */}

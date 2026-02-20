@@ -10,7 +10,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@capacitor/cli": "^8.1.0",
+    "@capacitor/core": "^8.1.0",
+    "@capacitor/ios": "^8.1.0",
     "@tailwindcss/vite": "^4.1.18",
+    "capacitor-native-biometric": "^4.2.2",
     "firebase": "^12.8.0",
     "lucide-react": "^0.563.0",
     "openai": "^6.16.0",

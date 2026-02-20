@@ -49,9 +49,12 @@ export const StreakService = {
         let milestone = null;
 
         if (streakData.lastLogDate) {
+            // Parse lastLogDate as local date parts to avoid UTC shift
+            const [ly, lm, ld] = streakData.lastLogDate.split('-').map(Number);
+            const lastDateLocal = new Date(ly, lm - 1, ld);
+
             const today = new Date();
             today.setHours(0, 0, 0, 0);
-            const lastDate = new Date(streakData.lastLogDate);
             const yesterday = new Date(today);
             yesterday.setDate(yesterday.getDate() - 1);
             const yesterdayStr = getLocalISODate(yesterday);
@@ -61,7 +64,7 @@ export const StreakService = {
                 newStreak = streakData.currentStreak + 1;
             } else {
                 // Streak broken - check if we have a freeze
-                const daysMissed = Math.floor((today - lastDate) / (1000 * 60 * 60 * 24));
+                const daysMissed = Math.round((today - lastDateLocal) / (1000 * 60 * 60 * 24));
                 if (daysMissed <= 2 && streakData.streakFreezes > 0) {
                     // Use freeze to maintain streak
                     newStreak = streakData.currentStreak + 1;

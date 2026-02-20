@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, Loader2, Delete, Wallet, ChevronDown } from 'lucide-react';
+import { X, Loader2, Delete, Wallet, ChevronDown, AlertTriangle } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { getLocalISODate } from '../../utils/dateUtils';
 import { FirebaseService } from '../../services/FirebaseService';
@@ -10,7 +10,7 @@ import { useCurrency } from '../../context/CurrencyContext';
 import { useCategory } from '../../context/CategoryContext';
 import { CURRENCIES, getCurrencyByCode } from '../../data/currencies';
 
-const QuickAddModal = ({ isOpen, onClose, user, accounts, selectedAccountId: defaultAccountId }) => {
+const QuickAddModal = ({ isOpen, onClose, user, accounts, selectedAccountId: defaultAccountId, transactions = [] }) => {
     const navigate = useNavigate();
     const [amount, setAmount] = useState('0');
     const [note, setNote] = useState('');
@@ -21,6 +21,8 @@ const QuickAddModal = ({ isOpen, onClose, user, accounts, selectedAccountId: def
     const [showAdvanced, setShowAdvanced] = useState(false);
     const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [showDuplicateWarning, setShowDuplicateWarning] = useState(false);
+    const [pendingTransaction, setPendingTransaction] = useState(null);
     const { showToast } = useToast();
     const { selectedCurrency: globalCurrency, convert } = useCurrency();
     const { categories: allCategories } = useCategory();
@@ -167,24 +169,45 @@ const QuickAddModal = ({ isOpen, onClose, user, accounts, selectedAccountId: def
             return;
         }
 
-        setLoading(true);
-        try {
-            await FirebaseService.addTransaction(user.uid, {
-                total: numAmount,
-                category: categoryId,
-                merchant: note || categories.find(c => c.id === categoryId)?.name || 'Expense',
-                date: date,
-                accountId: accountId || null,
-                currency: currency,
-                type: 'expense'
-            });
+        const txnData = {
+            total: numAmount,
+            category: categoryId,
+            merchant: note || categories.find(c => c.id === categoryId)?.name || 'Expense',
+            date: date,
+            accountId: accountId || null,
+            currency: currency,
+            type: 'expense'
+        };
 
-            if (accountId) {
-                const selectedAccount = accounts.find(a => a.id === accountId);
+        // Duplicate detection
+        const potentialDup = transactions.find(t =>
+            t.total === numAmount &&
+            t.date === date &&
+            t.category === categoryId
+        );
+
+        if (potentialDup && !showDuplicateWarning) {
+            setPendingTransaction(txnData);
+            setShowDuplicateWarning(true);
+            return;
+        }
+
+        await saveTransaction(txnData);
+    };
+
+    const saveTransaction = async (txnData) => {
+        setLoading(true);
+        setShowDuplicateWarning(false);
+        setPendingTransaction(null);
+        try {
+            await FirebaseService.addTransaction(user.uid, txnData);
+
+            if (txnData.accountId) {
+                const selectedAccount = accounts.find(a => a.id === txnData.accountId);
                 if (selectedAccount) {
-                    const deductionAmount = convert(numAmount, currency, selectedAccount.currency || 'USD');
+                    const deductionAmount = convert(txnData.total, txnData.currency, selectedAccount.currency || 'USD');
                     const newBalance = (selectedAccount.balance || 0) - deductionAmount;
-                    await FirebaseService.updateAccount(user.uid, accountId, {
+                    await FirebaseService.updateAccount(user.uid, txnData.accountId, {
                         balance: newBalance
                     });
                 }
@@ -281,6 +304,8 @@ const QuickAddModal = ({ isOpen, onClose, user, accounts, selectedAccountId: def
                             </div>
                             <input
                                 type="text"
+                                inputMode="decimal"
+                                pattern="[0-9]*"
                                 autoFocus
                                 onClick={() => !showAdvanced && setShowAdvanced(true)}
                                 onFocus={(e) => e.target.select()}
@@ -471,6 +496,44 @@ const QuickAddModal = ({ isOpen, onClose, user, accounts, selectedAccountId: def
                     </button>
                 </div>
             </div>
+
+            {/* Duplicate Warning Modal */}
+            {showDuplicateWarning && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+                    <div className="w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-default)' }}>
+                        <div className="p-4 bg-amber-500/10 border-b border-amber-500/20 flex items-center gap-3">
+                            <div className="w-10 h-10 bg-amber-500 rounded-full flex items-center justify-center">
+                                <AlertTriangle className="w-6 h-6 text-white" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>Potential Duplicate</h3>
+                                <p className="text-xs text-amber-400">A similar entry already exists</p>
+                            </div>
+                        </div>
+                        <div className="p-5">
+                            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                                You already have a <span className="font-medium" style={{ color: 'var(--text-primary)' }}>{pendingTransaction?.category}</span> transaction
+                                of <span className="font-medium text-emerald-500">{pendingTransaction?.currency} {pendingTransaction?.total}</span> on {pendingTransaction?.date}.
+                            </p>
+                            <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>Do you still want to add this expense?</p>
+                        </div>
+                        <div className="p-4 border-t flex gap-3" style={{ borderColor: 'var(--border-default)' }}>
+                            <button
+                                onClick={() => { setShowDuplicateWarning(false); setPendingTransaction(null); }}
+                                className="flex-1 py-3 rounded-xl font-bold transition-all" style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-secondary)' }}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={() => pendingTransaction && saveTransaction(pendingTransaction)}
+                                className="flex-1 bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 rounded-xl transition-all"
+                            >
+                                Add Anyway
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
