@@ -93,7 +93,14 @@ For valid receipts, output JSON:
             const recentTransactions = transactions
                 .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
                 .slice(0, 100)
-                .map(t => ({ merchant: t.merchant, total: t.total, date: t.date, category: t.category, currency: t.currency }));
+                .map(t => ({
+                    merchant: t.merchant,
+                    total: t.total,
+                    date: t.date,
+                    category: t.category,
+                    currency: t.currency,
+                    items: t.items ? t.items.map(i => i.name).join(', ') : undefined
+                }));
 
             const systemPrompt = `You are the Horizon Chat Auditor. You have access to the user's recent transaction history below. 
       Use this data to answer their questions accurately. Be concise and professional.
